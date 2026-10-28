@@ -3,6 +3,7 @@ const Challenge = require('../models/Challenge');
 const ChallengeMembership = require('../models/ChallengeMembership');
 const ScoreTransaction = require('../models/ScoreTransaction');
 const { parseLeetCodeUrl } = require('../utils/leetcodeValidator');
+const { toLocalDateString, parseDateBoundary } = require('../utils/dateUtils');
 
 /**
  * Submit a solved LeetCode problem
@@ -52,18 +53,25 @@ const createSubmission = async (req, res, next) => {
     }
 
     const now = new Date();
-    if (challenge.startDate && now < challenge.startDate) {
-      return res.status(400).json({
-        success: false,
-        message: `Challenge has not started yet. Starts on ${challenge.startDate.toLocaleDateString()}.`,
-      });
+    // Allow start-day activity: challenge is active if today >= start date boundary
+    if (challenge.startDate) {
+      const challengeStartDay = parseDateBoundary(challenge.startDate, 'start');
+      if (now < challengeStartDay) {
+        return res.status(400).json({
+          success: false,
+          message: `Challenge has not started yet. Starts on ${toLocalDateString(challenge.startDate)}.`,
+        });
+      }
     }
 
-    if (challenge.endDate && now > challenge.endDate) {
-      return res.status(400).json({
-        success: false,
-        message: `Challenge has ended. Ended on ${challenge.endDate.toLocaleDateString()}.`,
-      });
+    if (challenge.endDate) {
+      const challengeEndDay = parseDateBoundary(challenge.endDate, 'end');
+      if (now > challengeEndDay) {
+        return res.status(400).json({
+          success: false,
+          message: `Challenge has ended. Ended on ${toLocalDateString(challenge.endDate)}.`,
+        });
+      }
     }
 
     // Verify participant membership in this challenge
@@ -91,29 +99,35 @@ const createSubmission = async (req, res, next) => {
 
     const { slug, canonicalUrl } = urlValidation;
 
-    // Validate completion date
-    const parsedDate = new Date(completionDate);
-    if (isNaN(parsedDate.getTime())) {
+    // Validate completion date format
+    const parsedDate = parseDateBoundary(completionDate, 'default');
+    if (!parsedDate || isNaN(parsedDate.getTime())) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid completionDate: Must be a valid ISO date string.',
+        message: 'Invalid completionDate: Must be a valid date string.',
       });
     }
 
-    // Future date validation
-    if (parsedDate > now) {
+    const completionDateDayStart = parseDateBoundary(completionDate, 'start');
+    const todayEnd = parseDateBoundary(new Date(), 'end');
+
+    // Future date validation: Disallow dates strictly after today (local date boundary)
+    if (completionDateDayStart > todayEnd) {
       return res.status(400).json({
         success: false,
         message: 'Completion date cannot be set in the future.',
       });
     }
 
-    // Check against challenge start date
-    if (challenge.startDate && parsedDate < challenge.startDate) {
-      return res.status(400).json({
-        success: false,
-        message: `Completion date cannot precede the challenge start date (${challenge.startDate.toLocaleDateString()}).`,
-      });
+    // Check against challenge start date (local calendar day boundary)
+    if (challenge.startDate) {
+      const challengeStartDay = parseDateBoundary(challenge.startDate, 'start');
+      if (completionDateDayStart < challengeStartDay) {
+        return res.status(400).json({
+          success: false,
+          message: `Completion date cannot precede the challenge start date (${toLocalDateString(challenge.startDate)}).`,
+        });
+      }
     }
 
     // Duplicate solve prevention:

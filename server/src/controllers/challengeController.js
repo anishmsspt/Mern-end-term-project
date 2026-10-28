@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const Challenge = require('../models/Challenge');
 const ChallengeMembership = require('../models/ChallengeMembership');
+const { toLocalDateString, parseDateBoundary } = require('../utils/dateUtils');
 
 /**
  * Join an active challenge using a valid join code
@@ -46,20 +47,26 @@ const joinChallenge = async (req, res, next) => {
 
     const now = new Date();
 
-    // Check challenge start date
-    if (challenge.startDate && now < challenge.startDate) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot join challenge: This challenge does not begin until ${challenge.startDate.toLocaleDateString()}.`,
-      });
+    // Check challenge start date (allow start day)
+    if (challenge.startDate) {
+      const challengeStartDay = parseDateBoundary(challenge.startDate, 'start');
+      if (now < challengeStartDay) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot join challenge: This challenge does not begin until ${toLocalDateString(challenge.startDate)}.`,
+        });
+      }
     }
 
     // Check challenge end date
-    if (challenge.endDate && now > challenge.endDate) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot join challenge: This challenge concluded on ${challenge.endDate.toLocaleDateString()}.`,
-      });
+    if (challenge.endDate) {
+      const challengeEndDay = parseDateBoundary(challenge.endDate, 'end');
+      if (now > challengeEndDay) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot join challenge: This challenge concluded on ${toLocalDateString(challenge.endDate)}.`,
+        });
+      }
     }
 
     // Check for existing membership (duplicate prevention)

@@ -252,6 +252,87 @@ describe('Phase 3: Challenge Membership & Daily Submissions Tests', () => {
       assert.match(res.body.message, /future/i);
     });
 
+    test('Allows submission on exact challenge start date (e.g. October 29, 2026)', async () => {
+      // Create a challenge that starts today
+      const todayChallenge = await Challenge.create({
+        title: 'Today Sprint',
+        joinCode: 'TODAY26',
+        host: hostUser._id,
+        startDate: new Date('2026-10-29T00:00:00.000Z'),
+        endDate: new Date('2026-11-29T23:59:59.999Z'),
+      });
+
+      await ChallengeMembership.create({
+        user: participantA._id,
+        challenge: todayChallenge._id,
+        role: 'participant',
+        status: 'active',
+      });
+
+      const res = await request(app)
+        .post('/api/submissions')
+        .set('Authorization', `Bearer ${participantAToken}`)
+        .send({
+          challengeId: todayChallenge._id.toString(),
+          problemTitle: 'Valid Start Date Problem',
+          problemUrl: 'https://leetcode.com/problems/valid-parentheses/',
+          completionDate: '2026-10-29',
+        });
+
+      assert.equal(res.status, 201);
+      assert.equal(res.body.success, true);
+      assert.equal(res.body.submission.problemSlug, 'valid-parentheses');
+    });
+
+    test('Rejects completion date preceding challenge start date (e.g. day before start)', async () => {
+      const futureChallenge = await Challenge.create({
+        title: 'Future Sprint',
+        joinCode: 'FUTUR26',
+        host: hostUser._id,
+        startDate: new Date('2026-10-29T00:00:00.000Z'),
+        endDate: new Date('2026-11-29T23:59:59.999Z'),
+      });
+
+      await ChallengeMembership.create({
+        user: participantA._id,
+        challenge: futureChallenge._id,
+        role: 'participant',
+        status: 'active',
+      });
+
+      const res = await request(app)
+        .post('/api/submissions')
+        .set('Authorization', `Bearer ${participantAToken}`)
+        .send({
+          challengeId: futureChallenge._id.toString(),
+          problemTitle: 'Early Problem',
+          problemUrl: 'https://leetcode.com/problems/climbing-stairs/',
+          completionDate: '2026-10-28', // Day before start date
+        });
+
+      assert.equal(res.status, 400);
+      assert.equal(res.body.success, false);
+      assert.match(res.body.message, /cannot precede the challenge start date/i);
+    });
+
+    test('Allows submission with today local YYYY-MM-DD date format', async () => {
+      const now = new Date();
+      const localTodayYmd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+      const res = await request(app)
+        .post('/api/submissions')
+        .set('Authorization', `Bearer ${participantAToken}`)
+        .send({
+          challengeId: activeChallenge._id.toString(),
+          problemTitle: 'Today Local Problem',
+          problemUrl: 'https://leetcode.com/problems/merge-two-sorted-lists/',
+          completionDate: localTodayYmd,
+        });
+
+      assert.equal(res.status, 201);
+      assert.equal(res.body.success, true);
+    });
+
     test('PREVENTS DUPLICATE SOLVE: Rejects second submission of already Pending/Approved problem', async () => {
       const payload = {
         challengeId: activeChallenge._id.toString(),
