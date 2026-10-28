@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getMe } = require('../controllers/authController');
+const { register, login, getMe, provisionHost } = require('../controllers/authController');
 const { requireAuth, requireHost } = require('../middleware/auth');
 
 // Public authentication routes
 router.post('/register', register);
 router.post('/login', login);
+
+// Development-only one-time Host provisioning (secured by PROVISION_HOST_SECRET)
+router.post('/provision-host', provisionHost);
 
 // Protected user identity route
 router.get('/me', requireAuth, getMe);

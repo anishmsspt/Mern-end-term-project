@@ -248,6 +248,108 @@ describe('Authentication & Role-Based Authorization Tests', () => {
     });
   });
 
+  describe('Development Host Provisioning (POST /api/auth/provision-host)', () => {
+    const TEST_PROVISION_SECRET = 'super_secret_test_provision_token_xyz';
+
+    beforeEach(() => {
+      process.env.NODE_ENV = 'test';
+      process.env.PROVISION_HOST_SECRET = TEST_PROVISION_SECRET;
+    });
+
+    test('rejection when PROVISION_HOST_SECRET is missing on the server', async () => {
+      delete process.env.PROVISION_HOST_SECRET;
+
+      const res = await request(app)
+        .post('/api/auth/provision-host')
+        .send({ secret: 'any_secret' });
+
+      assert.equal(res.status, 503);
+      assert.equal(res.body.success, false);
+      assert.match(res.body.message, /PROVISION_HOST_SECRET is not configured/i);
+    });
+
+    test('rejection when invalid secret is supplied', async () => {
+      const res = await request(app)
+        .post('/api/auth/provision-host')
+        .send({ secret: 'wrong_secret_123' });
+
+      assert.equal(res.status, 401);
+      assert.equal(res.body.success, false);
+      assert.match(res.body.message, /Invalid or missing provisioning secret/i);
+    });
+
+    test('rejection when called in production mode regardless of secret', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+
+      const res = await request(app)
+        .post('/api/auth/provision-host')
+        .set('x-provision-secret', TEST_PROVISION_SECRET)
+        .send({});
+
+      process.env.NODE_ENV = originalEnv;
+
+      assert.equal(res.status, 403);
+      assert.equal(res.body.success, false);
+      assert.match(res.body.message, /strictly disabled in production/i);
+    });
+
+    test('successfully provisions a Host and initial challenge when valid secret is provided', async () => {
+      // Ensure no host exists
+      await User.deleteMany({ role: 'host' });
+      await Challenge.deleteMany({});
+
+      const res = await request(app)
+        .post('/api/auth/provision-host')
+        .set('x-provision-secret', TEST_PROVISION_SECRET)
+        .send({
+          email: 'newhost@unanimous.dev',
+          password: 'HostPassword2026!',
+          name: 'New Host',
+          leetcodeUsername: 'newhostcoder',
+        });
+
+      assert.equal(res.status, 201);
+      assert.equal(res.body.success, true);
+      assert.equal(res.body.host.email, 'newhost@unanimous.dev');
+      assert.equal(res.body.host.role, 'host');
+      assert.equal(res.body.challenge.joinCode, 'SPRINT26');
+
+      // Verify Host can now authenticate
+      const loginRes = await request(app).post('/api/auth/login').send({
+        email: 'newhost@unanimous.dev',
+        password: 'HostPassword2026!',
+      });
+      assert.equal(loginRes.status, 200);
+      assert.equal(loginRes.body.user.role, 'host');
+    });
+
+    test('prevents duplicate Host provisioning or overwriting existing Host', async () => {
+      // First provision
+      await User.deleteMany({ role: 'host' });
+      await request(app)
+        .post('/api/auth/provision-host')
+        .set('x-provision-secret', TEST_PROVISION_SECRET)
+        .send({
+          email: 'firsthost@unanimous.dev',
+          password: 'HostPassword2026!',
+        });
+
+      // Second attempt to provision
+      const res = await request(app)
+        .post('/api/auth/provision-host')
+        .set('x-provision-secret', TEST_PROVISION_SECRET)
+        .send({
+          email: 'secondhost@unanimous.dev',
+          password: 'AnotherPassword2026!',
+        });
+
+      assert.equal(res.status, 409);
+      assert.equal(res.body.success, false);
+      assert.match(res.body.message, /Host account already exists/i);
+    });
+  });
+
   describe('Challenge Model Validation', () => {
     test('enforces challenge date order and required fields', async () => {
       const host = await User.create({
