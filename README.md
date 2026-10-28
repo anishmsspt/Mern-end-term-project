@@ -1,23 +1,30 @@
 # Unanimous LeetCode Challenge Hub
 
-> A centralized competitive programming challenge platform designed for student groups, coding clubs, and engineering cohorts to replace spreadsheets, repeated WhatsApp messages, and manual score calculations.
+> A cinematic, full-stack competitive programming management platform designed for student groups, coding clubs, and engineering cohorts to replace spreadsheets, repeated WhatsApp messages, and manual score calculations.
 
 ---
 
 ## 🚀 Core Primary Workflow
 
-$$\text{Participant Solves on LeetCode} \longrightarrow \text{Submits Activity} \longrightarrow \text{Host Reviews} \longrightarrow \text{Host Approves \& Scores} \longrightarrow \text{Leaderboard Updates}$$
+$$\text{Participant Joins Challenge} \longrightarrow \text{Solves on LeetCode} \longrightarrow \text{Submits Solution} \longrightarrow \text{Host Reviews} \longrightarrow \text{Approves \& Allocates Points} \longrightarrow \text{Dynamic Standings Update}$$
+
+1. **Host Provisions Challenge:** Host creates a cohort challenge (e.g., `SPRINT26`) defining start/end dates and daily submission caps.
+2. **Participant Enrolls:** Participant authenticates, enters the join code, and links their LeetCode profile handle.
+3. **Daily Solves Reported:** Participant inputs canonical LeetCode problem URLs with completion dates, difficulty notes, and approach explanations.
+4. **Host Review Queue:** Host inspects submitted solutions in a dedicated review queue, with FIFO sorting and state tracking.
+5. **Score Allocation & Audit Log:** Host approves with verified points (1–100) or rejects with a mandatory explanation. An immutable `ScoreTransaction` record is written atomically.
+6. **Dynamic Authoritative Leaderboard:** Real-time standings update authoritatively from approved solutions with deterministic tie-breaking.
 
 ---
 
 ## 🛠️ Technology Stack (MERN)
 
-- **Frontend:** React 18, Vite, React Router v6, Tailwind CSS (Dark-mode first), Lucide React.
-- **Backend:** Node.js, Express.js, REST API architecture, centralized error handling.
+- **Frontend:** React 18, Vite, React Router v6, Tailwind CSS (Cinematic Dark-mode Developer Theme), Lucide React.
+- **Backend:** Node.js, Express.js, REST API architecture, stateless Bearer JWT, centralized error handling.
 - **Database:** MongoDB & Mongoose.
   - **Production:** MongoDB Atlas cluster URI configured via `MONGODB_URI`.
-  - **Local Development / Automated Tests:** Optional ephemeral In-Memory MongoDB (`mongodb-memory-server`) with explicit non-persistent warnings (strictly disabled in production).
-- **Tooling:** Git, Node Test Runner (`node:test`), Supertest.
+  - **Local Development / Automated Tests:** Ephemeral In-Memory MongoDB (`mongodb-memory-server`) with explicit non-persistent warnings (strictly disabled in production).
+- **Tooling:** Git, Node Test Runner (`node:test`), Supertest, Postman-compatible endpoints.
 
 ---
 
@@ -25,30 +32,58 @@ $$\text{Participant Solves on LeetCode} \longrightarrow \text{Submits Activity} 
 
 ```text
 d:\Mern End term\
-├── client/                     # Vite + React Frontend
+├── client/                               # Vite + React Frontend
 │   ├── src/
-│   │   ├── components/         # Navbar, ConnectivityCard (Health Diagnostic)
-│   │   ├── pages/              # LandingPage
-│   │   ├── services/           # api.js (Centralized fetch wrapper)
-│   │   ├── App.jsx             # React Router structure
-│   │   ├── index.css           # Tailwind custom styling & theme tokens
-│   │   └── main.jsx
+│   │   ├── components/
+│   │   │   ├── common/ProtectedRoute.jsx
+│   │   │   ├── submissions/             # JoinChallengeCard, SubmissionModal, SubmissionsList
+│   │   │   ├── Navbar.jsx               # Navigation bar with role badges & leaderboard link
+│   │   │   └── ConnectivityCard.jsx     # Diagnostic backend connectivity widget
+│   │   ├── context/AuthContext.jsx      # Reactive auth state, token persistence, logout
+│   │   ├── pages/
+│   │   │   ├── auth/                    # LoginPage, RegisterPage
+│   │   │   ├── dashboard/DashboardPage.jsx
+│   │   │   ├── host/ReviewQueuePage.jsx # Host review queue, approve/reject modals
+│   │   │   ├── leaderboard/LeaderboardPage.jsx # Real-time cohort standings table
+│   │   │   └── LandingPage.jsx
+│   │   ├── services/api.js              # Centralized fetch wrapper
+│   │   ├── App.jsx                      # React Router routes
+│   │   └── index.css                    # Tailwind CSS tokens
 │   ├── .env.example
 │   ├── vite.config.js
-│   ├── tailwind.config.js
 │   └── package.json
 │
-├── server/                     # Express Backend API
+├── server/                               # Express Backend API
 │   ├── src/
-│   │   ├── config/             # db.js (MongoDB connection with safe dev-only fallback)
-│   │   ├── app.js              # Express app, CORS, parsing, error handler, /api/health
-│   │   └── server.js           # Server listener bootstrap
-│   ├── tests/                  # Automated API tests (health.test.js)
+│   │   ├── config/db.js                 # Safe MongoDB connection utility (Atlas or dev memory server)
+│   │   ├── controllers/
+│   │   │   ├── authController.js        # Register, login, me
+│   │   │   ├── challengeController.js   # Create, list, join
+│   │   │   ├── submissionController.js  # Submit, inspect, review-queue, approve/reject
+│   │   │   └── leaderboardController.js # Authoritative aggregation pipeline
+│   │   ├── middleware/auth.js           # requireAuth, requireHost, requireParticipant
+│   │   ├── models/
+│   │   │   ├── User.js                  # User schema with bcrypt hashing & role enums
+│   │   │   ├── Challenge.js             # Challenge schema & date order validation
+│   │   │   ├── ChallengeMembership.js   # Compound unique index { user: 1, challenge: 1 }
+│   │   │   ├── Submission.js            # Problem slug, status machine, canonical URL parser
+│   │   │   └── ScoreTransaction.js      # Immutable audit records of awarded points
+│   │   ├── routes/                      # authRoutes, challengeRoutes, submissionRoutes, leaderboardRoutes
+│   │   ├── scripts/bootstrapHost.js     # Secure Host bootstrap script
+│   │   ├── utils/token.js               # Stateless JWT generation & verification
+│   │   ├── app.js                       # Express app, middleware, routes mount
+│   │   └── server.js                    # Server listener bootstrap
+│   ├── tests/                           # 47 automated tests (100% pass across 16 suites)
+│   │   ├── health.test.js
+│   │   ├── auth.test.js
+│   │   ├── submissions.test.js
+│   │   ├── hostReview.test.js
+│   │   └── leaderboard.test.js
 │   ├── .env.example
 │   └── package.json
 │
-├── .gitignore                  # Git exclusions (node_modules, .env, dist, logs)
-└── package.json                # Root orchestration scripts
+├── .gitignore                            # Clean MERN exclusions
+└── package.json                          # Monorepo orchestration scripts
 ```
 
 ---
@@ -56,8 +91,8 @@ d:\Mern End term\
 ## ⚙️ Quick Start (Local Development)
 
 ### 1. Prerequisites
-- **Node.js:** v18+ (verified on v24.11.1)
-- **npm:** v9+ (verified on 11.6.2)
+- **Node.js:** v18+ (tested on v24.11.1)
+- **npm:** v9+ (tested on 11.6.2)
 
 ### 2. Install Dependencies
 ```bash
@@ -72,84 +107,82 @@ npm install --prefix client
 ```
 
 ### 3. Environment Configuration
-Copy `.env.example` templates to `.env`:
+Templates are provided in `.env.example`:
 ```bash
-# Server environment
-cp server/.env.example server/.env
+# Server configuration
+copy server\.env.example server\.env
 
-# Client environment
-cp client/.env.example client/.env
+# Client configuration
+copy client\.env.example client\.env
 ```
 
-### 4. Running the Application
+### 4. Provision Host Account
+```bash
+npm run bootstrap:host --prefix server
+```
+Default evaluation credentials:
+- **Email:** `host@unanimous.dev`
+- **Password:** `HostAdmin2026!`
+- **Role:** `host`
+
+### 5. Running the Application
 ```bash
 # Run both Backend (Port 5000) and Frontend (Port 5173) concurrently:
 npm run dev
-
-# Or run separately:
-npm run dev:server
-npm run dev:client
 ```
+- **Frontend App:** [http://localhost:5173](http://localhost:5173)
+- **Backend API:** [http://localhost:5000](http://localhost:5000)
+- **API Health Check:** [http://localhost:5000/api/health](http://localhost:5000/api/health)
 
-- **Frontend URL:** [http://localhost:5173](http://localhost:5173)
-- **Backend Health Check:** [http://localhost:5000/api/health](http://localhost:5000/api/health)
-
-### 5. Automated Tests & Build Verification
+### 6. Automated Test Suite & Build Verification
 ```bash
-# Run server test suite:
+# Run complete backend test suite (47 tests across 16 suites):
 npm test --prefix server
 
-# Build client for production:
+# Run frontend production build:
 npm run build --prefix client
 ```
 
 ---
 
-## 📋 Milestones Progress
-- [x] **Milestone 1:** Repository initialization, Express backend with `/api/health`, MongoDB connection utility with safe dev-only in-memory fallback, React + Vite + Tailwind dark-mode UI with live connectivity diagnostics, and production build verification.
-- [x] **Milestone 2 (Phase 2):** User and Challenge Mongoose models, bcrypt password hashing, stateless JWT authentication (`/api/auth/register`, `/api/auth/login`, `/api/auth/me`), Host vs Participant RBAC authorization middleware, secure first-Host bootstrap script (`npm run bootstrap:host`), and reactive AuthContext with protected routes.
-- [x] **Milestone 3 (Phase 3):** Challenge membership (join codes with compound unique index), canonical LeetCode URL parser, daily submission engine (`POST /api/submissions`), participant history views, duplicate solve prevention, and participant data isolation.
-- [ ] **Milestone 4 (Phase 4):** Host review queue, submission approval/rejection state machine, and point allocation.
-- [ ] **Milestone 5 (Phase 5):** Auditable score transactions and dynamic overall/weekly leaderboard.
-- [ ] **Milestone 6 (Phase 6):** Weekly problem sets, participant analytics, and announcements.
-- [ ] **Milestone 7 (Phase 7):** Comprehensive automated testing and security hardening.
-- [ ] **Milestone 8 (Phase 8):** Production deployment and live evaluation.
+## 📡 REST API Reference
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/health` | Public | System status, database connection, uptime |
+| `POST` | `/api/auth/register` | Public | Register new participant (role escalation blocked) |
+| `POST` | `/api/auth/login` | Public | Authenticate user & return Bearer token |
+| `GET` | `/api/auth/me` | Authenticated | Fetch active user profile and role |
+| `POST` | `/api/challenges` | Host | Create new cohort challenge with join code |
+| `GET` | `/api/challenges/mine` | Authenticated | List challenges user is enrolled in or hosting |
+| `POST` | `/api/challenges/join` | Participant | Join challenge using case-insensitive code |
+| `POST` | `/api/submissions` | Participant | Submit solved LeetCode problem solve |
+| `GET` | `/api/submissions/mine` | Participant | View submitted solves for active challenge |
+| `GET` | `/api/submissions/:id` | Owner / Host | Isolated submission detail view |
+| `GET` | `/api/submissions/review-queue` | Host | List pending submissions for host's challenges |
+| `POST` | `/api/submissions/:id/review` | Host | Approve (with points) or reject (with reason) |
+| `GET` | `/api/leaderboard/:challengeId` | Authenticated | Authoritative standings & breakdown |
 
 ---
 
-## 🎯 Challenge Membership & Submissions (Phase 3)
+## 🏆 Standings & Tie-Breaking Rules
 
-### Challenge Joining (`POST /api/challenges/join`)
-- Participants supply a case-insensitive join code (e.g. `SPRINT26`).
-- Enforces compound unique index `{ user: 1, challenge: 1 }` to prevent duplicate memberships.
-- Validates challenge status (`active`) and active date window (`startDate <= now <= endDate`).
-- Restricts joining to `participant` accounts only (Hosts manage challenges).
-
-### Daily Problem Submissions (`POST /api/submissions`)
-- **Canonical LeetCode URL Parsing:** Validates incoming URLs against `leetcode.com`, extracts the problem slug (e.g. `https://leetcode.com/problems/two-sum/description/` $\rightarrow$ `two-sum`), and generates a canonical link `https://leetcode.com/problems/two-sum/`.
-- **Duplicate Solve Prevention:** Prevents participants from submitting duplicate solves for problems that are currently in `Pending` or `Approved` status in the same challenge.
-- **Date & Limit Validation:** Rejects future completion dates, dates preceding challenge start, and enforces `maxSubmissionsPerDay` challenge policies.
-- **Data Isolation:** `GET /api/submissions/:id` ensures only the submitting participant or the Challenge Host can view private submission details; unauthorized participants receive `403 Forbidden`.
+Standings on `/leaderboard` are calculated dynamically via a MongoDB aggregation pipeline:
+1. **Total Points Awarded (DESC):** Derived strictly from host-approved submissions.
+2. **Total Solved Count (DESC):** Secondary tie-breaker for participants with identical points.
+3. **Earliest Last Solve Timestamp (ASC):** Deterministic tertiary tie-breaker rewarding faster problem resolution.
+4. **Timeframe Support:** Standings can be filtered by `Overall` or `This Week` (`?timeframe=weekly`).
+5. **Auditable Score History:** Every approved submission writes an immutable `ScoreTransaction` storing the submission ID, reviewer ID, timestamp, and awarded points.
 
 ---
 
-## 🔐 Authentication & Role-Based Authorization (Phase 2)
+## 🧪 Evaluation & Demo Walkthrough
 
-### JWT Strategy & Trade-Offs
-- **Architecture:** Stateless Bearer Token via `Authorization: Bearer <token>` header.
-- **Why Bearer over Cookie:** Avoids third-party cross-origin blocking between independent frontend and backend domains; immune to ambient CSRF attacks; high interoperability with automated tests and API consumers.
-- **Revocation & Expiration:** Configurable token expiration (default: 7 days) paired with database account status verification on every authenticated request.
-- **Client Behavior:** Logout immediately clears stored tokens from `localStorage` and resets reactive `AuthContext` state.
-
-### Secure First-Host Provisioning
-Public registration is strictly constrained to `role: 'participant'`. The primary Host is provisioned securely through the CLI bootstrap utility, which refuses to overwrite an existing Host:
-
-```bash
-# Provision first host with environment variables (or defaults):
-npm run bootstrap:host --prefix server
-```
-
-Default local credentials for evaluation:
-- **Email:** `host@unanimous.dev`
-- **Password:** `HostAdmin2026!`
-- **Role:** `host`
+1. **Start Dev Servers:** Run `npm run dev`.
+2. **Log in as Host:** Go to `http://localhost:5173/login` and log in with `host@unanimous.dev` / `HostAdmin2026!`.
+3. **Copy Join Code:** On the Host Dashboard, find the active challenge (e.g. `SPRINT26`) or create one.
+4. **Register Participant:** Log out, click Register, and create a participant account (e.g., `alice@student.edu`).
+5. **Join Challenge:** On the Participant Dashboard, enter `SPRINT26` and click **Join Challenge**.
+6. **Submit Solution:** Click **Submit Daily Problem**, provide a valid LeetCode URL (`https://leetcode.com/problems/two-sum/`), select difficulty, and submit.
+7. **Host Review:** Log back in as Host, navigate to `/host/review`, find Alice's pending submission, and click **Approve** (allocate 10 points).
+8. **Check Leaderboard:** Navigate to `/leaderboard` (or view on dashboard). Alice now appears at Rank #1 with 10 points, 1 solve, and a detailed difficulty breakdown.
