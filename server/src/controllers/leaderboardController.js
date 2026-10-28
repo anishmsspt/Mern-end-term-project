@@ -165,6 +165,7 @@ const getChallengeLeaderboard = async (req, res, next) => {
       timeframe: timeframe || 'overall',
       totalParticipants: fullLeaderboard.length,
       leaderboard: fullLeaderboard,
+      standings: fullLeaderboard, // Aliased for client & test interoperability
     });
   } catch (error) {
     next(error);

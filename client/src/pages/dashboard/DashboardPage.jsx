@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getMyChallenges, getMySubmissions } from '../../services/api';
+import { getMyChallenges, getMySubmissions, createChallenge } from '../../services/api';
 import JoinChallengeCard from '../../components/challenges/JoinChallengeCard';
 import SubmissionModal from '../../components/submissions/SubmissionModal';
 import SubmissionsList from '../../components/submissions/SubmissionsList';
@@ -29,6 +29,16 @@ export default function DashboardPage() {
   const [submissions, setSubmissions] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [isCreateChallengeModalOpen, setIsCreateChallengeModalOpen] = useState(false);
+  const [newChallengeForm, setNewChallengeForm] = useState({
+    title: '',
+    description: '',
+    joinCode: '',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  });
+  const [createChallengeLoading, setCreateChallengeLoading] = useState(false);
+  const [createChallengeError, setCreateChallengeError] = useState(null);
 
   // Load challenges and user submissions
   const loadDashboardData = async () => {
@@ -63,6 +73,32 @@ export default function DashboardPage() {
   const handleChallengeJoined = (newChallenge) => {
     setActiveChallenge(newChallenge);
     loadDashboardData();
+  };
+
+  const handleCreateChallenge = async (e) => {
+    e.preventDefault();
+    setCreateChallengeLoading(true);
+    setCreateChallengeError(null);
+    try {
+      const res = await createChallenge(newChallengeForm, token);
+      if (res.success) {
+        setIsCreateChallengeModalOpen(false);
+        setNewChallengeForm({
+          title: '',
+          description: '',
+          joinCode: '',
+          startDate: new Date().toISOString().split('T')[0],
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        });
+        loadDashboardData();
+      } else {
+        setCreateChallengeError(res.message || 'Failed to create challenge');
+      }
+    } catch (err) {
+      setCreateChallengeError(err.message || 'Error creating challenge');
+    } finally {
+      setCreateChallengeLoading(false);
+    }
   };
 
   const handleSubmissionCreated = (newSub) => {
@@ -172,14 +208,24 @@ export default function DashboardPage() {
           {/* Host Challenge Management Summary */}
           {isHost && (
             <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-              <div className="flex items-center space-x-3 pb-3 border-b border-slate-800">
-                <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                  <Trophy className="w-5 h-5" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <Trophy className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-white tracking-tight">Active Challenges Managed</h2>
+                    <p className="text-xs text-slate-400">Create cohorts and share join codes with participants</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-white tracking-tight">Active Challenges Managed</h2>
-                  <p className="text-xs text-slate-400">Share your join code with participants to invite them</p>
-                </div>
+
+                <button
+                  onClick={() => setIsCreateChallengeModalOpen(true)}
+                  className="py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center space-x-1.5 self-start sm:self-auto shadow-md"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Create Challenge</span>
+                </button>
               </div>
 
               {challenges.length === 0 ? (
@@ -315,6 +361,124 @@ export default function DashboardPage() {
           onClose={() => setIsSubmitModalOpen(false)}
           onSubmissionCreated={handleSubmissionCreated}
         />
+      )}
+
+      {/* Host Create Challenge Modal */}
+      {isHost && isCreateChallengeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center space-x-2">
+                <Trophy className="w-5 h-5 text-indigo-400" />
+                <h3 className="text-base font-bold text-white">Create New Challenge</h3>
+              </div>
+              <button
+                onClick={() => setIsCreateChallengeModalOpen(false)}
+                className="text-slate-400 hover:text-white text-xs font-mono"
+              >
+                ✕ ESC
+              </button>
+            </div>
+
+            {createChallengeError && (
+              <div className="p-3 rounded-lg bg-rose-950/50 border border-rose-800/60 text-xs text-rose-300">
+                {createChallengeError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateChallenge} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Challenge Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Winter 2026 30-Day LeetCode Sprint"
+                  value={newChallengeForm.title}
+                  onChange={(e) =>
+                    setNewChallengeForm({ ...newChallengeForm, title: e.target.value })
+                  }
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Description</label>
+                <textarea
+                  rows="2"
+                  placeholder="Goals, target problem count, rules..."
+                  value={newChallengeForm.description}
+                  onChange={(e) =>
+                    setNewChallengeForm({ ...newChallengeForm, description: e.target.value })
+                  }
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">
+                  Custom Join Code (Optional, uppercase auto-formatted)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. CODECAMP26 (Leave blank for random 8-character code)"
+                  value={newChallengeForm.joinCode}
+                  onChange={(e) =>
+                    setNewChallengeForm({
+                      ...newChallengeForm,
+                      joinCode: e.target.value.toUpperCase(),
+                    })
+                  }
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">Start Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={newChallengeForm.startDate}
+                    onChange={(e) =>
+                      setNewChallengeForm({ ...newChallengeForm, startDate: e.target.value })
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">End Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={newChallengeForm.endDate}
+                    onChange={(e) =>
+                      setNewChallengeForm({ ...newChallengeForm, endDate: e.target.value })
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateChallengeModalOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createChallengeLoading}
+                  className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition flex items-center space-x-2"
+                >
+                  {createChallengeLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{createChallengeLoading ? 'Creating...' : 'Create Challenge'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

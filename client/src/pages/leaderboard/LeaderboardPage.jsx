@@ -17,9 +17,10 @@ export default function LeaderboardPage() {
     async function loadChallenges() {
       try {
         const res = await getMyChallenges(token);
-        if (res.success && res.data && res.data.length > 0) {
-          setChallenges(res.data);
-          setSelectedChallengeId(res.data[0]._id);
+        const challengeList = res.challenges || res.data || [];
+        if (res.success && challengeList.length > 0) {
+          setChallenges(challengeList);
+          setSelectedChallengeId(challengeList[0]._id);
         } else {
           setLoading(false);
         }

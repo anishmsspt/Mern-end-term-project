@@ -49,12 +49,19 @@ const connectDB = async () => {
       console.warn('================================================================');
 
       const { MongoMemoryServer } = require('mongodb-memory-server');
+      const crypto = require('crypto');
+      const path = require('path');
+      const fs = require('fs');
+      const instancePath = path.join('D:\\mongodb-tmp', `inst-${crypto.randomBytes(4).toString('hex')}`);
+      if (!fs.existsSync(instancePath)) {
+        fs.mkdirSync(instancePath, { recursive: true });
+      }
       mongoMemoryServer = await MongoMemoryServer.create({
         binary: {
           downloadDir: 'D:\\mongodb-binaries',
         },
         instance: {
-          dbPath: 'D:\\mongodb-tmp',
+          dbPath: instancePath,
         },
       });
       const memoryUri = mongoMemoryServer.getUri();
