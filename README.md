@@ -107,10 +107,33 @@ npm run build --prefix client
 
 ## 📋 Milestones Progress
 - [x] **Milestone 1:** Repository initialization, Express backend with `/api/health`, MongoDB connection utility with safe dev-only in-memory fallback, React + Vite + Tailwind dark-mode UI with live connectivity diagnostics, and production build verification.
-- [ ] **Milestone 2 (Phase 2):** User and Challenge Mongoose models, bcrypt password hashing, JWT authentication, and Host/Participant role authorization.
+- [x] **Milestone 2 (Phase 2):** User and Challenge Mongoose models, bcrypt password hashing, stateless JWT authentication (`/api/auth/register`, `/api/auth/login`, `/api/auth/me`), Host vs Participant RBAC authorization middleware, secure first-Host bootstrap script (`npm run bootstrap:host`), and reactive AuthContext with protected routes.
 - [ ] **Milestone 3 (Phase 3):** Challenge membership (join codes) and daily LeetCode submission engine with canonical URL validation.
 - [ ] **Milestone 4 (Phase 4):** Host review queue, submission approval/rejection state machine, and point allocation.
 - [ ] **Milestone 5 (Phase 5):** Auditable score transactions and dynamic overall/weekly leaderboard.
 - [ ] **Milestone 6 (Phase 6):** Weekly problem sets, participant analytics, and announcements.
 - [ ] **Milestone 7 (Phase 7):** Comprehensive automated testing and security hardening.
 - [ ] **Milestone 8 (Phase 8):** Production deployment and live evaluation.
+
+---
+
+## 🔐 Authentication & Role-Based Authorization (Phase 2)
+
+### JWT Strategy & Trade-Offs
+- **Architecture:** Stateless Bearer Token via `Authorization: Bearer <token>` header.
+- **Why Bearer over Cookie:** Avoids third-party cross-origin blocking between independent frontend and backend domains; immune to ambient CSRF attacks; high interoperability with automated tests and API consumers.
+- **Revocation & Expiration:** Configurable token expiration (default: 7 days) paired with database account status verification on every authenticated request.
+- **Client Behavior:** Logout immediately clears stored tokens from `localStorage` and resets reactive `AuthContext` state.
+
+### Secure First-Host Provisioning
+Public registration is strictly constrained to `role: 'participant'`. The primary Host is provisioned securely through the CLI bootstrap utility, which refuses to overwrite an existing Host:
+
+```bash
+# Provision first host with environment variables (or defaults):
+npm run bootstrap:host --prefix server
+```
+
+Default local credentials for evaluation:
+- **Email:** `host@unanimous.dev`
+- **Password:** `HostAdmin2026!`
+- **Role:** `host`

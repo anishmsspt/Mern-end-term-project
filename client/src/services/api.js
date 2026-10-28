@@ -1,6 +1,6 @@
 /**
  * Centralized API Service
- * Handles base URL configuration and standard HTTP requests
+ * Handles base URL configuration, Bearer token injection, and standard HTTP requests
  */
 
 const BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -8,15 +8,19 @@ const BASE_URL = import.meta.env.VITE_API_URL || '';
 export const API_BASE_URL = BASE_URL;
 
 /**
- * Fetch server health status
+ * Standard HTTP request wrapper with JSON error handling
  */
-export async function fetchHealth() {
-  const url = `${BASE_URL}/api/health`;
+async function request(endpoint, options = {}) {
+  const url = `${BASE_URL}${endpoint}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.token && { Authorization: `Bearer ${options.token}` }),
+    ...options.headers,
+  };
+
   const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    ...options,
+    headers,
   });
 
   const data = await response.json().catch(() => null);
@@ -30,4 +34,42 @@ export async function fetchHealth() {
   }
 
   return data;
+}
+
+/**
+ * Fetch server health status
+ */
+export async function fetchHealth() {
+  return request('/api/health', { method: 'GET' });
+}
+
+/**
+ * Register a new user
+ * Note: Always registers as participant
+ */
+export async function registerUser(userData) {
+  return request('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(userData),
+  });
+}
+
+/**
+ * Log in with existing credentials
+ */
+export async function loginUser(credentials) {
+  return request('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(credentials),
+  });
+}
+
+/**
+ * Fetch current authenticated user's profile
+ */
+export async function getMeProfile(token) {
+  return request('/api/auth/me', {
+    method: 'GET',
+    token,
+  });
 }

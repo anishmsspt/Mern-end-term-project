@@ -43,6 +43,12 @@ if (process.env.NODE_ENV !== 'test') {
   });
 }
 
+// Centralized Error Handler
+const authRoutes = require('./routes/authRoutes');
+
+// Mount API Routes
+app.use('/api/auth', authRoutes);
+
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {
   const dbStatus = getDBStatus();
