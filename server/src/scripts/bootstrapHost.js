@@ -29,22 +29,35 @@ async function bootstrapHost() {
       process.exit(0);
     }
 
-    // Extract credentials from environment variables or provide explicit, documented defaults
-    const hostEmail = (process.env.BOOTSTRAP_HOST_EMAIL || 'host@unanimous.dev').trim().toLowerCase();
-    const hostPassword = process.env.BOOTSTRAP_HOST_PASSWORD || 'HostAdmin2026!';
+    // Extract credentials from environment variables securely
+    const hostEmail = process.env.BOOTSTRAP_HOST_EMAIL && process.env.BOOTSTRAP_HOST_EMAIL.trim().toLowerCase();
+    const hostPassword = process.env.BOOTSTRAP_HOST_PASSWORD;
     const hostName = (process.env.BOOTSTRAP_HOST_NAME || 'Primary Challenge Host').trim();
-    const leetcodeHandle = (process.env.BOOTSTRAP_HOST_LEETCODE || 'unanimous_host').trim();
+    const leetcodeHandle = (process.env.BOOTSTRAP_HOST_LEETCODE || '').trim();
 
-    if (hostPassword.length < 8) {
+    if (!hostEmail || !hostPassword) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'FATAL: BOOTSTRAP_HOST_EMAIL and BOOTSTRAP_HOST_PASSWORD environment variables are strictly required in production.'
+        );
+      }
+      console.warn('⚠️  [SECURITY WARNING] BOOTSTRAP_HOST_EMAIL or BOOTSTRAP_HOST_PASSWORD not set in environment.');
+      console.warn('⚠️  Falling back to development-only local credentials. DO NOT USE IN PRODUCTION.');
+    }
+
+    const finalEmail = hostEmail || 'host@unanimous.dev';
+    const finalPassword = hostPassword || 'HostAdmin2026!';
+
+    if (finalPassword.length < 8) {
       throw new Error('Host password must be at least 8 characters in length.');
     }
 
-    console.log(`[Bootstrap] Creating initial Host account for: ${hostEmail}...`);
-    const passwordHash = await User.hashPassword(hostPassword);
+    console.log(`[Bootstrap] Creating initial Host account for: ${finalEmail}...`);
+    const passwordHash = await User.hashPassword(finalPassword);
 
     const hostUser = await User.create({
       name: hostName,
-      email: hostEmail,
+      email: finalEmail,
       passwordHash,
       role: 'host',
       leetcodeUsername: leetcodeHandle,

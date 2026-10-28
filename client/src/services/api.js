@@ -43,10 +43,8 @@ export async function fetchHealth() {
   return request('/api/health', { method: 'GET' });
 }
 
-/**
- * Register a new user
- * Note: Always registers as participant
- */
+/* ==================== Auth Services ==================== */
+
 export async function registerUser(userData) {
   return request('/api/auth/register', {
     method: 'POST',
@@ -54,9 +52,6 @@ export async function registerUser(userData) {
   });
 }
 
-/**
- * Log in with existing credentials
- */
 export async function loginUser(credentials) {
   return request('/api/auth/login', {
     method: 'POST',
@@ -64,11 +59,65 @@ export async function loginUser(credentials) {
   });
 }
 
-/**
- * Fetch current authenticated user's profile
- */
 export async function getMeProfile(token) {
   return request('/api/auth/me', {
+    method: 'GET',
+    token,
+  });
+}
+
+/* ==================== Challenge Services ==================== */
+
+export async function joinChallenge(joinCode, token) {
+  return request('/api/challenges/join', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ joinCode }),
+  });
+}
+
+export async function getMyChallenges(token) {
+  return request('/api/challenges/mine', {
+    method: 'GET',
+    token,
+  });
+}
+
+export async function createChallenge(challengeData, token) {
+  return request('/api/challenges', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(challengeData),
+  });
+}
+
+export async function getChallengeById(id, token) {
+  return request(`/api/challenges/${id}`, {
+    method: 'GET',
+    token,
+  });
+}
+
+/* ==================== Submission Services ==================== */
+
+export async function submitProblem(submissionData, token) {
+  return request('/api/submissions', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(submissionData),
+  });
+}
+
+export async function getMySubmissions(challengeId, token) {
+  const query = challengeId ? `?challengeId=${challengeId}` : '';
+  return request(`/api/submissions/mine${query}`, {
+    method: 'GET',
+    token,
+  });
+}
+
+export async function getSubmissionById(id, token) {
+  return request(`/api/submissions/${id}`, {
     method: 'GET',
     token,
   });

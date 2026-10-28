@@ -108,12 +108,28 @@ npm run build --prefix client
 ## 📋 Milestones Progress
 - [x] **Milestone 1:** Repository initialization, Express backend with `/api/health`, MongoDB connection utility with safe dev-only in-memory fallback, React + Vite + Tailwind dark-mode UI with live connectivity diagnostics, and production build verification.
 - [x] **Milestone 2 (Phase 2):** User and Challenge Mongoose models, bcrypt password hashing, stateless JWT authentication (`/api/auth/register`, `/api/auth/login`, `/api/auth/me`), Host vs Participant RBAC authorization middleware, secure first-Host bootstrap script (`npm run bootstrap:host`), and reactive AuthContext with protected routes.
-- [ ] **Milestone 3 (Phase 3):** Challenge membership (join codes) and daily LeetCode submission engine with canonical URL validation.
+- [x] **Milestone 3 (Phase 3):** Challenge membership (join codes with compound unique index), canonical LeetCode URL parser, daily submission engine (`POST /api/submissions`), participant history views, duplicate solve prevention, and participant data isolation.
 - [ ] **Milestone 4 (Phase 4):** Host review queue, submission approval/rejection state machine, and point allocation.
 - [ ] **Milestone 5 (Phase 5):** Auditable score transactions and dynamic overall/weekly leaderboard.
 - [ ] **Milestone 6 (Phase 6):** Weekly problem sets, participant analytics, and announcements.
 - [ ] **Milestone 7 (Phase 7):** Comprehensive automated testing and security hardening.
 - [ ] **Milestone 8 (Phase 8):** Production deployment and live evaluation.
+
+---
+
+## 🎯 Challenge Membership & Submissions (Phase 3)
+
+### Challenge Joining (`POST /api/challenges/join`)
+- Participants supply a case-insensitive join code (e.g. `SPRINT26`).
+- Enforces compound unique index `{ user: 1, challenge: 1 }` to prevent duplicate memberships.
+- Validates challenge status (`active`) and active date window (`startDate <= now <= endDate`).
+- Restricts joining to `participant` accounts only (Hosts manage challenges).
+
+### Daily Problem Submissions (`POST /api/submissions`)
+- **Canonical LeetCode URL Parsing:** Validates incoming URLs against `leetcode.com`, extracts the problem slug (e.g. `https://leetcode.com/problems/two-sum/description/` $\rightarrow$ `two-sum`), and generates a canonical link `https://leetcode.com/problems/two-sum/`.
+- **Duplicate Solve Prevention:** Prevents participants from submitting duplicate solves for problems that are currently in `Pending` or `Approved` status in the same challenge.
+- **Date & Limit Validation:** Rejects future completion dates, dates preceding challenge start, and enforces `maxSubmissionsPerDay` challenge policies.
+- **Data Isolation:** `GET /api/submissions/:id` ensures only the submitting participant or the Challenge Host can view private submission details; unauthorized participants receive `403 Forbidden`.
 
 ---
 

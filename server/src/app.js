@@ -45,9 +45,13 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Centralized Error Handler
 const authRoutes = require('./routes/authRoutes');
+const challengeRoutes = require('./routes/challengeRoutes');
+const submissionRoutes = require('./routes/submissionRoutes');
 
 // Mount API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/challenges', challengeRoutes);
+app.use('/api/submissions', submissionRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {

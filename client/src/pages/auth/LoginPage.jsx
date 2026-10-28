@@ -9,7 +9,6 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  Sparkles,
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -52,14 +51,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleFillDemoHost = () => {
-    setFormData({
-      email: 'host@unanimous.dev',
-      password: 'HostAdmin2026!',
-    });
-    setErrorMsg('');
-  };
-
   return (
     <div className="max-w-md mx-auto px-4 py-12 space-y-6">
       <div className="text-center space-y-2">
@@ -68,28 +59,6 @@ export default function LoginPage() {
         </h1>
         <p className="text-xs text-slate-400">
           Sign in to your Unanimous LeetCode Challenge account
-        </p>
-      </div>
-
-      {/* Demo Credentials Pill */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2 shadow-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-1.5 text-xs font-semibold text-brand-400">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Evaluation Host Account</span>
-          </div>
-          <button
-            type="button"
-            onClick={handleFillDemoHost}
-            className="text-xs font-mono text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition"
-          >
-            Auto-fill Host
-          </button>
-        </div>
-        <p className="text-xs text-slate-400">
-          Created via <code className="text-slate-300">npm run bootstrap:host</code>:
-          <br />
-          <span className="font-mono text-slate-300">host@unanimous.dev</span> • <span className="font-mono text-slate-300">HostAdmin2026!</span>
         </p>
       </div>
 
