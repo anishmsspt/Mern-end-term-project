@@ -147,3 +147,13 @@ export async function reviewSubmission(submissionId, reviewData, token) {
     body: JSON.stringify(reviewData),
   });
 }
+
+/* ==================== Leaderboard Services ==================== */
+
+export async function getChallengeLeaderboard(challengeId, timeframe, token) {
+  const query = timeframe ? `?timeframe=${encodeURIComponent(timeframe)}` : '';
+  return request(`/api/leaderboard/${challengeId}${query}`, {
+    method: 'GET',
+    token,
+  });
+}

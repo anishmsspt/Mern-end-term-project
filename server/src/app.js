@@ -47,11 +47,13 @@ if (process.env.NODE_ENV !== 'test') {
 const authRoutes = require('./routes/authRoutes');
 const challengeRoutes = require('./routes/challengeRoutes');
 const submissionRoutes = require('./routes/submissionRoutes');
+const leaderboardRoutes = require('./routes/leaderboardRoutes');
 
 // Mount API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/challenges', challengeRoutes);
 app.use('/api/submissions', submissionRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {

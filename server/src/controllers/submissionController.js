@@ -1,6 +1,7 @@
 const Submission = require('../models/Submission');
 const Challenge = require('../models/Challenge');
 const ChallengeMembership = require('../models/ChallengeMembership');
+const ScoreTransaction = require('../models/ScoreTransaction');
 const { parseLeetCodeUrl } = require('../utils/leetcodeValidator');
 
 /**
@@ -459,6 +460,23 @@ const reviewSubmission = async (req, res, next) => {
         });
       }
 
+      // Persist immutable ScoreTransaction audit record
+      await ScoreTransaction.findOneAndUpdate(
+        { submission: updatedSubmission._id },
+        {
+          $setOnInsert: {
+            participant: updatedSubmission.participant._id,
+            challenge: updatedSubmission.challenge._id,
+            submission: updatedSubmission._id,
+            points: pointsAwarded,
+            awardedBy: req.user._id,
+            reason: `Approved solve: ${updatedSubmission.problemTitle}`,
+            awardedAt: new Date(),
+          },
+        },
+        { upsert: true, new: true }
+      );
+
       return res.status(200).json({
         success: true,
         message: `Submission approved successfully. ${pointsAwarded} points allocated.`,
@@ -500,6 +518,23 @@ const reviewSubmission = async (req, res, next) => {
           message: 'Conflict: This submission was already reviewed by another simultaneous request.',
         });
       }
+
+      // Persist immutable ScoreTransaction audit record
+      await ScoreTransaction.findOneAndUpdate(
+        { submission: updatedSubmission._id },
+        {
+          $setOnInsert: {
+            participant: updatedSubmission.participant._id,
+            challenge: updatedSubmission.challenge._id,
+            submission: updatedSubmission._id,
+            points: pointsAwarded,
+            awardedBy: req.user._id,
+            reason: `Approved solve: ${updatedSubmission.problemTitle}`,
+            awardedAt: new Date(),
+          },
+        },
+        { upsert: true, new: true }
+      );
 
       return res.status(200).json({
         success: true,

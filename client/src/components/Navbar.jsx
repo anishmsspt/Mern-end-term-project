@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Terminal, LogOut, User, LayoutDashboard, LogIn, UserPlus } from 'lucide-react';
+import { Terminal, LogOut, User, LayoutDashboard, Trophy, LogIn, UserPlus } from 'lucide-react';
 
 export default function Navbar() {
   const { user, isAuthenticated, isHost, logout } = useAuth();
@@ -17,15 +17,15 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand */}
         <Link to={isAuthenticated ? '/dashboard' : '/'} className="flex items-center space-x-3 group">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-950/40 group-hover:scale-105 transition">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-brand-600 to-amber-400 flex items-center justify-center shadow-lg shadow-amber-950/40 group-hover:scale-105 transition">
             <Terminal className="w-4 h-4 text-slate-950 font-bold" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-bold text-base sm:text-lg tracking-tight text-white group-hover:text-brand-400 transition">
+              <span className="font-bold text-base sm:text-lg tracking-tight text-white group-hover:text-amber-400 transition">
                 Unanimous
               </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/30 font-mono">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-mono">
                 LeetCode Hub
               </span>
             </div>
@@ -43,6 +43,14 @@ export default function Navbar() {
               >
                 <LayoutDashboard className="w-3.5 h-3.5 text-slate-400" />
                 <span>Dashboard</span>
+              </Link>
+
+              <Link
+                to="/leaderboard"
+                className="inline-flex items-center space-x-1.5 text-xs text-amber-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-amber-950/40 transition"
+              >
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                <span>Leaderboard</span>
               </Link>
 
               {isHost && (

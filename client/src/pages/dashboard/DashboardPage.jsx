@@ -108,6 +108,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <Link
+              to="/leaderboard"
+              className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold text-xs transition flex items-center space-x-2 border border-amber-500/30"
+            >
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span>View Leaderboard</span>
+            </Link>
+
             {isParticipant && activeChallenge && (
               <button
                 onClick={() => setIsSubmitModalOpen(true)}

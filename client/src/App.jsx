@@ -7,6 +7,7 @@ import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ReviewQueuePage from './pages/host/ReviewQueuePage';
+import LeaderboardPage from './pages/leaderboard/LeaderboardPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
 export default function App() {
@@ -28,6 +29,16 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Protected Challenge Leaderboard */}
+              <Route
+                path="/leaderboard"
+                element={
+                  <ProtectedRoute>
+                    <LeaderboardPage />
                   </ProtectedRoute>
                 }
               />
