@@ -32,27 +32,27 @@ export default function SubmissionsList({ submissions, onOpenSubmitModal }) {
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status, pointsAwarded) => {
     switch (status) {
       case 'Approved':
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+          <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Approved</span>
+            <span>Approved: +{pointsAwarded || 0} pts</span>
           </span>
         );
       case 'Rejected':
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/30">
+          <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/30">
             <XCircle className="w-3.5 h-3.5" />
-            <span>Rejected</span>
+            <span>Rejected (0 pts)</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+          <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
             <Clock className="w-3.5 h-3.5" />
-            <span>Pending Review</span>
+            <span>Awaiting Host Review</span>
           </span>
         );
     }
@@ -158,7 +158,7 @@ export default function SubmissionsList({ submissions, onOpenSubmitModal }) {
                 </div>
 
                 <div className="flex items-center space-x-3 self-start sm:self-auto">
-                  {getStatusBadge(sub.status)}
+                  {getStatusBadge(sub.status, sub.pointsAwarded)}
                 </div>
               </div>
 
@@ -170,13 +170,24 @@ export default function SubmissionsList({ submissions, onOpenSubmitModal }) {
                 </div>
               )}
 
+              {/* Host Review Feedback Notes */}
+              {sub.reviewNotes && sub.status === 'Approved' && (
+                <div className="bg-emerald-950/20 border border-emerald-900/40 rounded-lg p-2.5 text-xs text-emerald-300 flex items-start space-x-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-emerald-200">Host Review Note: </span>
+                    <span>{sub.reviewNotes}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Host Feedback for Rejected Submissions */}
-              {sub.status === 'Rejected' && sub.rejectionReason && (
+              {sub.status === 'Rejected' && (sub.rejectionReason || sub.reviewNotes) && (
                 <div className="bg-rose-950/40 border border-rose-900/60 rounded-lg p-3 text-xs text-rose-300 flex items-start space-x-2.5">
                   <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
                   <div>
                     <span className="font-semibold text-rose-200">Host Review Feedback: </span>
-                    <span className="text-rose-300/90">{sub.rejectionReason}</span>
+                    <span className="text-rose-300/90">{sub.rejectionReason || sub.reviewNotes}</span>
                   </div>
                 </div>
               )}

@@ -6,6 +6,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
+import ReviewQueuePage from './pages/host/ReviewQueuePage';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
 export default function App() {
@@ -27,6 +28,16 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Protected Host Review Queue */}
+              <Route
+                path="/host/review"
+                element={
+                  <ProtectedRoute allowedRoles={['host', 'admin']}>
+                    <ReviewQueuePage />
                   </ProtectedRoute>
                 }
               />

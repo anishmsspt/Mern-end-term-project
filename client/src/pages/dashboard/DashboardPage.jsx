@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getMyChallenges, getMySubmissions } from '../../services/api';
 import JoinChallengeCard from '../../components/challenges/JoinChallengeCard';
@@ -68,6 +69,14 @@ export default function DashboardPage() {
     setSubmissions((prev) => [newSub, ...prev]);
   };
 
+  // Derive points authoritatively from approved submissions
+  const approvedSubmissions = submissions.filter((s) => s.status === 'Approved');
+  const totalApprovedPoints = approvedSubmissions.reduce(
+    (sum, s) => sum + (s.pointsAwarded || 0),
+    0
+  );
+  const pendingSubmissionsCount = submissions.filter((s) => s.status === 'Pending').length;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Welcome & Status Banner */}
@@ -107,6 +116,16 @@ export default function DashboardPage() {
                 <PlusCircle className="w-4 h-4" />
                 <span>Submit Daily Problem</span>
               </button>
+            )}
+
+            {isHost && (
+              <Link
+                to="/host/review"
+                className="py-2.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition flex items-center space-x-2 shadow-lg shadow-indigo-950/40"
+              >
+                <Clock className="w-4 h-4" />
+                <span>Review Queue</span>
+              </Link>
             )}
 
             <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3 text-xs font-mono space-y-1 text-slate-400">

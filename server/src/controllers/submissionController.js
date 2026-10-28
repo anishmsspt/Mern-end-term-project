@@ -255,8 +255,267 @@ const getSubmissionById = async (req, res, next) => {
   }
 };
 
+/**
+ * Host Review Queue
+ * Retrieves submissions for challenges managed by the authenticated Host
+ */
+const getReviewQueue = async (req, res, next) => {
+  try {
+    // Role check: Only Host or Admin accounts may access the review queue
+    if (req.user.role !== 'host' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Access to the Host review queue is restricted to Host accounts.',
+      });
+    }
+
+    const { challengeId, participantId, completionDate, status } = req.query;
+
+    // 1. Fetch all challenges owned by this Host
+    const hostChallenges = await Challenge.find({ host: req.user._id }).select('_id');
+    const hostChallengeIds = hostChallenges.map((c) => c._id);
+
+    if (hostChallengeIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        total: 0,
+        page: 1,
+        totalPages: 0,
+        submissions: [],
+      });
+    }
+
+    // 2. Validate challengeId filter if provided
+    let targetChallengeIds = hostChallengeIds;
+    if (challengeId) {
+      const isOwned = hostChallengeIds.some((id) => id.toString() === challengeId);
+      if (!isOwned && req.user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Forbidden: You do not have host authorization for the requested challenge.',
+        });
+      }
+      targetChallengeIds = [challengeId];
+    }
+
+    // 3. Build query filter
+    const query = {
+      challenge: { $in: targetChallengeIds },
+    };
+
+    // Default to 'Pending' if no status is specified; allow 'all' or specific status
+    if (!status || status.toLowerCase() === 'pending') {
+      query.status = 'Pending';
+    } else if (status.toLowerCase() !== 'all') {
+      query.status = status;
+    }
+
+    if (participantId) {
+      query.participant = participantId;
+    }
+
+    if (completionDate) {
+      const dayStart = new Date(completionDate);
+      if (!isNaN(dayStart.getTime())) {
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(completionDate);
+        dayEnd.setHours(23, 59, 59, 999);
+        query.completionDate = { $gte: dayStart, $lte: dayEnd };
+      }
+    }
+
+    // 4. Pagination & deterministic sorting (FIFO: oldest pending first)
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const [total, submissions] = await Promise.all([
+      Submission.countDocuments(query),
+      Submission.find(query)
+        .populate('participant', 'name email leetcodeUsername')
+        .populate('challenge', 'title joinCode rules')
+        .populate('reviewer', 'name email')
+        .sort({ createdAt: 1 })
+        .skip(skip)
+        .limit(limit),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+      submissions,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Host Review Action: Approve or Reject a submission
+ * Enforces atomic conditional updates and host-to-challenge authorization
+ */
+const reviewSubmission = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { decision, pointsAwarded, reviewNotes } = req.body;
+
+    // Role check: Only Host or Admin
+    if (req.user.role !== 'host' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Only challenge Hosts are authorized to review submissions.',
+      });
+    }
+
+    // Validate decision
+    const normalizedDecision = decision && String(decision).toLowerCase().trim();
+    if (normalizedDecision !== 'approve' && normalizedDecision !== 'reject') {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid review decision: Must be either 'approve' or 'reject'.",
+      });
+    }
+
+    // Find submission and verify challenge ownership
+    const submission = await Submission.findById(id).populate('challenge');
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        message: 'Submission not found.',
+      });
+    }
+
+    // Host-to-Challenge authorization check
+    const isChallengeHost =
+      submission.challenge &&
+      submission.challenge.host &&
+      submission.challenge.host.equals(req.user._id);
+
+    if (!isChallengeHost && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: You are not authorized to review submissions for this challenge.',
+      });
+    }
+
+    // State validation: Can only review Pending submissions
+    if (submission.status !== 'Pending') {
+      return res.status(409).json({
+        success: false,
+        message: `Conflict: This submission has already been reviewed (current status: '${submission.status}').`,
+        submission,
+      });
+    }
+
+    const MAX_POINTS = 100;
+
+    if (normalizedDecision === 'approve') {
+      // Validate pointsAwarded: strictly positive integer within bounds
+      if (
+        pointsAwarded === undefined ||
+        pointsAwarded === null ||
+        typeof pointsAwarded !== 'number' ||
+        !Number.isInteger(pointsAwarded) ||
+        pointsAwarded <= 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: 'Approval requires a positive integer point value (pointsAwarded > 0). Fractional, zero, or negative points are invalid.',
+        });
+      }
+
+      if (pointsAwarded > MAX_POINTS) {
+        return res.status(400).json({
+          success: false,
+          message: `Approval points cannot exceed the maximum limit of ${MAX_POINTS} points.`,
+        });
+      }
+
+      // Atomic conditional update ensuring concurrent requests cannot double-approve
+      const updatedSubmission = await Submission.findOneAndUpdate(
+        { _id: id, status: 'Pending' },
+        {
+          $set: {
+            status: 'Approved',
+            pointsAwarded,
+            reviewer: req.user._id,
+            reviewedAt: new Date(),
+            reviewNotes: reviewNotes ? String(reviewNotes).trim() : 'Approved by Host',
+            rejectionReason: '',
+          },
+        },
+        { new: true }
+      )
+        .populate('participant', 'name email leetcodeUsername')
+        .populate('challenge', 'title joinCode');
+
+      if (!updatedSubmission) {
+        return res.status(409).json({
+          success: false,
+          message: 'Conflict: This submission was already reviewed by another simultaneous request.',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `Submission approved successfully. ${pointsAwarded} points allocated.`,
+        submission: updatedSubmission,
+      });
+    }
+
+    if (normalizedDecision === 'reject') {
+      // Validate rejection reason: non-empty string required
+      const reason = reviewNotes || req.body.rejectionReason;
+      if (!reason || typeof reason !== 'string' || !reason.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Rejection requires a non-empty reviewNotes or rejectionReason explaining why the submission was rejected.',
+        });
+      }
+
+      // Atomic conditional update
+      const updatedSubmission = await Submission.findOneAndUpdate(
+        { _id: id, status: 'Pending' },
+        {
+          $set: {
+            status: 'Rejected',
+            pointsAwarded: 0,
+            reviewer: req.user._id,
+            reviewedAt: new Date(),
+            reviewNotes: reason.trim(),
+            rejectionReason: reason.trim(),
+          },
+        },
+        { new: true }
+      )
+        .populate('participant', 'name email leetcodeUsername')
+        .populate('challenge', 'title joinCode');
+
+      if (!updatedSubmission) {
+        return res.status(409).json({
+          success: false,
+          message: 'Conflict: This submission was already reviewed by another simultaneous request.',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Submission rejected. Feedback recorded and 0 points awarded.',
+        submission: updatedSubmission,
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubmission,
   getMySubmissions,
   getSubmissionById,
+  getReviewQueue,
+  reviewSubmission,
 };

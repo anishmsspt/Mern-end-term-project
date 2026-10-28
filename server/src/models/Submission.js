@@ -75,6 +75,11 @@ const submissionSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    reviewNotes: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     rejectionReason: {
       type: String,
       trim: true,

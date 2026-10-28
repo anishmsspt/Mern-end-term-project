@@ -49,7 +49,14 @@ const connectDB = async () => {
       console.warn('================================================================');
 
       const { MongoMemoryServer } = require('mongodb-memory-server');
-      mongoMemoryServer = await MongoMemoryServer.create();
+      mongoMemoryServer = await MongoMemoryServer.create({
+        binary: {
+          downloadDir: 'D:\\mongodb-binaries',
+        },
+        instance: {
+          dbPath: 'D:\\mongodb-tmp',
+        },
+      });
       const memoryUri = mongoMemoryServer.getUri();
 
       const conn = await mongoose.connect(memoryUri);

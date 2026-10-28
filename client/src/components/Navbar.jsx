@@ -45,6 +45,15 @@ export default function Navbar() {
                 <span>Dashboard</span>
               </Link>
 
+              {isHost && (
+                <Link
+                  to="/host/review"
+                  className="inline-flex items-center space-x-1.5 text-xs text-indigo-300 hover:text-white bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/50 px-3 py-1.5 rounded-lg transition"
+                >
+                  <span>Review Queue</span>
+                </Link>
+              )}
+
               {/* User role pill */}
               <div className="hidden sm:flex items-center space-x-2 bg-slate-950/80 border border-slate-800 px-3 py-1 rounded-full text-xs">
                 <span

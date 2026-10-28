@@ -122,3 +122,28 @@ export async function getSubmissionById(id, token) {
     token,
   });
 }
+
+/* ==================== Host Review Queue Services ==================== */
+
+export async function getReviewQueue(params = {}, token) {
+  const queryParts = [];
+  if (params.status) queryParts.push(`status=${encodeURIComponent(params.status)}`);
+  if (params.challengeId) queryParts.push(`challengeId=${encodeURIComponent(params.challengeId)}`);
+  if (params.participantId) queryParts.push(`participantId=${encodeURIComponent(params.participantId)}`);
+  if (params.page) queryParts.push(`page=${encodeURIComponent(params.page)}`);
+  if (params.limit) queryParts.push(`limit=${encodeURIComponent(params.limit)}`);
+
+  const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+  return request(`/api/submissions/review-queue${queryString}`, {
+    method: 'GET',
+    token,
+  });
+}
+
+export async function reviewSubmission(submissionId, reviewData, token) {
+  return request(`/api/submissions/${submissionId}/review`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify(reviewData),
+  });
+}
