@@ -5,20 +5,27 @@ const { getDBStatus } = require('./config/db');
 const app = express();
 
 // CORS configuration
+const configuredClientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.trim().replace(/\/$/, '') : '';
 const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
+  configuredClientUrl,
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
-];
+].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, postman)
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow requests with no origin (e.g. mobile apps, curl, postman, server-to-server)
+      if (!origin) {
         return callback(null, true);
       }
+      
+      const normalizedOrigin = origin.trim().replace(/\/$/, '');
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+      
       return callback(new Error(`CORS policy violation: origin ${origin} is not allowed`));
     },
     credentials: true,
