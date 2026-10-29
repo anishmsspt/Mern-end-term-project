@@ -14,16 +14,14 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <div className="min-h-screen bg-slate-950 flex flex-col font-sans selection:bg-brand-500 selection:text-black">
+        <div className="min-h-screen bg-slate-950 flex flex-col font-sans">
           <Navbar />
           <main className="flex-1">
             <Routes>
-              {/* Public Routes */}
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
 
-              {/* Protected User Dashboard */}
               <Route
                 path="/dashboard"
                 element={
@@ -33,7 +31,6 @@ export default function App() {
                 }
               />
 
-              {/* Protected Challenge Leaderboard */}
               <Route
                 path="/leaderboard"
                 element={
@@ -43,7 +40,6 @@ export default function App() {
                 }
               />
 
-              {/* Protected Host Review Queue */}
               <Route
                 path="/host/review"
                 element={
@@ -53,13 +49,12 @@ export default function App() {
                 }
               />
 
-              {/* 404 Route */}
               <Route
                 path="*"
                 element={
-                  <div className="py-24 text-center space-y-4">
-                    <h1 className="text-4xl font-extrabold text-white">404</h1>
-                    <p className="text-slate-400">Page not found.</p>
+                  <div className="lc-page py-20 text-center space-y-2">
+                    <h1 className="text-3xl font-semibold text-white">404</h1>
+                    <p className="text-sm text-slate-400">Page not found.</p>
                   </div>
                 }
               />

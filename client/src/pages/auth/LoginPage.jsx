@@ -1,15 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import {
-  Lock,
-  Mail,
-  ArrowRight,
-  Loader2,
-  AlertCircle,
-  Eye,
-  EyeOff,
-} from 'lucide-react';
+import { Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -52,47 +44,34 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-12 space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-          Welcome Back
-        </h1>
-        <p className="text-xs text-slate-400">
-          Sign in to your Unanimous LeetCode Challenge account
-        </p>
-      </div>
+    <div className="max-w-sm mx-auto px-4 py-12">
+      <h1 className="text-xl font-semibold text-white">Sign in</h1>
+      <p className="text-sm text-slate-400 mt-1 mb-5">Use your Unanimous Challenge Hub account.</p>
 
       {errorMsg && (
-        <div className="bg-rose-950/40 border border-rose-900/60 rounded-xl p-3.5 flex items-start space-x-3 text-xs text-rose-300 animate-fadeIn">
-          <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+        <div className="mb-4 lc-card border-hard/30 p-3 flex items-start gap-2 text-xs text-hard">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Login Form */}
-      <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        {/* Email Field */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-slate-300">Email Address</label>
-          <div className="relative">
-            <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="developer@example.com"
-              required
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="lc-card p-5 space-y-3.5">
+        <div>
+          <label className="lc-label">Email</label>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="you@example.com"
+            required
+            className="lc-input"
+          />
         </div>
 
-        {/* Password Field */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-slate-300">Password</label>
+        <div>
+          <label className="lc-label">Password</label>
           <div className="relative">
-            <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
             <input
               type={showPassword ? 'text' : 'password'}
               name="password"
@@ -100,44 +79,36 @@ export default function LoginPage() {
               onChange={handleChange}
               placeholder="••••••••"
               required
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-10 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
+              className="lc-input pr-9"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 transition"
+              className="absolute right-2.5 top-2 text-slate-500 hover:text-slate-300"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
         </div>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full mt-2 py-2.5 px-4 rounded-lg bg-brand-600 hover:bg-brand-500 text-slate-950 font-semibold text-xs transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-950/40 disabled:opacity-50"
-        >
+        <button type="submit" disabled={isLoading} className="lc-btn-primary w-full mt-1">
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Verifying credentials...</span>
+              Signing in...
             </>
           ) : (
-            <>
-              <span>Sign In</span>
-              <ArrowRight className="w-4 h-4" />
-            </>
+            'Sign in'
           )}
         </button>
       </form>
 
-      <div className="text-center text-xs text-slate-400">
-        Don&apos;t have an account?{' '}
-        <Link to="/register" className="text-brand-400 hover:text-brand-300 font-medium underline underline-offset-2">
-          Create Participant Account
+      <p className="mt-4 text-center text-sm text-slate-400">
+        No account?{' '}
+        <Link to="/register" className="text-brand-500 hover:text-brand-400">
+          Register
         </Link>
-      </div>
+      </p>
     </div>
   );
 }

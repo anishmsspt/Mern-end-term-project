@@ -1,18 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import {
-  User,
-  Mail,
-  Lock,
-  Code2,
-  ArrowRight,
-  Loader2,
-  AlertCircle,
-  Eye,
-  EyeOff,
-  ShieldCheck,
-} from 'lucide-react';
+import { Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -78,90 +67,63 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-12 space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-          Join the Challenge
-        </h1>
-        <p className="text-xs text-slate-400">
-          Create your Participant account to report solved problems and climb the leaderboard
-        </p>
-      </div>
-
-      {/* Role notice banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex items-start space-x-3 text-xs text-slate-400 shadow-md">
-        <ShieldCheck className="w-4 h-4 text-brand-400 flex-shrink-0 mt-0.5" />
-        <p>
-          Registration creates an official <strong className="text-slate-200">Participant</strong> account. Host management privileges are provisioned via secure server CLI.
-        </p>
-      </div>
+    <div className="max-w-sm mx-auto px-4 py-10">
+      <h1 className="text-xl font-semibold text-white">Create account</h1>
+      <p className="text-sm text-slate-400 mt-1 mb-4">
+        Participant accounts report solves and appear on the leaderboard. Host access is provisioned separately.
+      </p>
 
       {errorMsg && (
-        <div className="bg-rose-950/40 border border-rose-900/60 rounded-xl p-3.5 flex items-start space-x-3 text-xs text-rose-300">
-          <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+        <div className="mb-4 lc-card border-hard/30 p-3 flex items-start gap-2 text-xs text-hard">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Register Form */}
-      <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        {/* Full Name */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-slate-300">Full Name *</label>
-          <div className="relative">
-            <User className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Alex Johnson"
-              required
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="lc-card p-5 space-y-3">
+        <div>
+          <label className="lc-label">Full name *</label>
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="Alex Johnson"
+            required
+            className="lc-input"
+          />
         </div>
 
-        {/* Email Address */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-slate-300">Email Address *</label>
-          <div className="relative">
-            <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="alex@example.com"
-              required
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
-            />
-          </div>
+        <div>
+          <label className="lc-label">Email *</label>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="alex@example.com"
+            required
+            className="lc-input"
+          />
         </div>
 
-        {/* LeetCode Username */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-slate-300">
-            LeetCode Username <span className="text-slate-500">(Optional)</span>
+        <div>
+          <label className="lc-label">
+            LeetCode username <span className="text-slate-600">(optional)</span>
           </label>
-          <div className="relative">
-            <Code2 className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
-            <input
-              type="text"
-              name="leetcodeUsername"
-              value={formData.leetcodeUsername}
-              onChange={handleChange}
-              placeholder="alex_coder99"
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
-            />
-          </div>
+          <input
+            type="text"
+            name="leetcodeUsername"
+            value={formData.leetcodeUsername}
+            onChange={handleChange}
+            placeholder="alex_coder99"
+            className="lc-input font-mono"
+          />
         </div>
 
-        {/* Password */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-slate-300">Password (8+ characters) *</label>
+        <div>
+          <label className="lc-label">Password (8+ characters) *</label>
           <div className="relative">
-            <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
             <input
               type={showPassword ? 'text' : 'password'}
               name="password"
@@ -169,61 +131,49 @@ export default function RegisterPage() {
               onChange={handleChange}
               placeholder="••••••••"
               required
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-10 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
+              className="lc-input pr-9"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 transition"
+              className="absolute right-2.5 top-2 text-slate-500 hover:text-slate-300"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
         </div>
 
-        {/* Confirm Password */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-slate-300">Confirm Password *</label>
-          <div className="relative">
-            <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="••••••••"
-              required
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
-            />
-          </div>
+        <div>
+          <label className="lc-label">Confirm password *</label>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            placeholder="••••••••"
+            required
+            className="lc-input"
+          />
         </div>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full mt-2 py-2.5 px-4 rounded-lg bg-brand-600 hover:bg-brand-500 text-slate-950 font-semibold text-xs transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-950/40 disabled:opacity-50"
-        >
+        <button type="submit" disabled={isLoading} className="lc-btn-primary w-full mt-1">
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Creating your account...</span>
+              Creating account...
             </>
           ) : (
-            <>
-              <span>Register Account</span>
-              <ArrowRight className="w-4 h-4" />
-            </>
+            'Register'
           )}
         </button>
       </form>
 
-      <div className="text-center text-xs text-slate-400">
+      <p className="mt-4 text-center text-sm text-slate-400">
         Already registered?{' '}
-        <Link to="/login" className="text-brand-400 hover:text-brand-300 font-medium underline underline-offset-2">
-          Sign In
+        <Link to="/login" className="text-brand-500 hover:text-brand-400">
+          Sign in
         </Link>
-      </div>
+      </p>
     </div>
   );
 }

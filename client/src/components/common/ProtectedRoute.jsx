@@ -9,9 +9,9 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-3">
-        <Loader2 className="w-8 h-8 text-brand-400 animate-spin" />
-        <p className="text-xs font-mono text-slate-400">Verifying session credentials...</p>
+      <div className="min-h-[50vh] flex items-center justify-center gap-2 text-sm text-slate-400">
+        <Loader2 className="w-5 h-5 text-brand-500 animate-spin" />
+        Checking session...
       </div>
     );
   }
@@ -24,14 +24,12 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
   // Check role authorization if restricted
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     return (
-      <div className="max-w-md mx-auto my-16 p-6 bg-slate-900 border border-slate-800 rounded-xl text-center space-y-4">
-        <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mx-auto text-rose-400">
-          <ShieldAlert className="w-6 h-6" />
-        </div>
-        <h2 className="text-lg font-bold text-white">Access Denied</h2>
-        <p className="text-xs text-slate-400 leading-relaxed">
-          Your account role (<code className="text-brand-400">{user.role}</code>) does not have permission to view this resource.
-          Required role(s): <code className="text-slate-300">{allowedRoles.join(', ')}</code>.
+      <div className="max-w-sm mx-auto my-16 lc-card p-5 text-center space-y-2">
+        <ShieldAlert className="w-6 h-6 text-hard mx-auto" />
+        <h2 className="text-sm font-semibold text-white">Access denied</h2>
+        <p className="text-xs text-slate-400">
+          Role <code className="text-brand-500">{user.role}</code> cannot view this page. Required:{' '}
+          <code className="text-slate-300">{allowedRoles.join(', ')}</code>.
         </p>
       </div>
     );
