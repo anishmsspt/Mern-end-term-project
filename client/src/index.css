@@ -54,10 +54,10 @@
   .lc-eyebrow {
     @apply font-sans text-[11px] tracking-[0.32em] uppercase text-peach-300 flex items-center gap-3.5;
   }
-  .lc-eyebrow::before {
-    content: "";
-    @apply w-8 h-px bg-current opacity-70 inline-block;
-  }
+  .lc-eyebrow {
+  @apply font-sans text-[11px] tracking-[0.32em] uppercase flex items-center gap-3.5;
+  color: #f2b48c;
+  } 
 
   .lc-display {
     @apply font-serif font-normal text-cream-50 tracking-tight;
