@@ -37,37 +37,49 @@ export default function JoinChallengeCard({ activeChallenge, onChallengeJoined }
 
   if (activeChallenge) {
     return (
-      <div className="lc-card p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="lc-card lc-card-pine p-6 relative overflow-hidden">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-white">{activeChallenge.title}</h2>
-              <span className="lc-badge bg-easy/10 text-easy">{activeChallenge.status}</span>
+            <div className="flex items-center gap-3">
+              <span className="font-serif text-2xl text-cream-50 font-normal">
+                {activeChallenge.title}
+              </span>
+              <span className="lc-badge lc-badge-approved">
+                {activeChallenge.status}
+              </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{activeChallenge.description}</p>
+            <p className="text-xs text-pine-300 mt-1 max-w-xl leading-relaxed">
+              {activeChallenge.description || 'Active competitive programming cohort challenge.'}
+            </p>
           </div>
-          <div className="text-xs font-mono text-slate-400">
-            Code <span className="text-brand-500 font-semibold">{activeChallenge.joinCode}</span>
+
+          <div className="text-right">
+            <div className="text-[10px] uppercase tracking-[0.24em] text-pine-300">
+              Join code
+            </div>
+            <div className="font-mono text-xl tracking-[0.22em] text-peach-300 font-semibold mt-0.5">
+              {activeChallenge.joinCode}
+            </div>
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-400">
+
+        <div className="mt-6 pt-4 border-t border-pine-500/30 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-pine-300">
           <div>
-            Window{' '}
-            <span className="text-slate-200 font-mono">
-              {new Date(activeChallenge.startDate).toLocaleDateString()} —{' '}
-              {new Date(activeChallenge.endDate).toLocaleDateString()}
+            <span className="text-[10px] tracking-[0.2em] uppercase text-pine-400 block mb-0.5">Timeframe</span>
+            <span className="text-cream-100 font-mono text-[11px]">
+              {new Date(activeChallenge.startDate).toLocaleDateString()} — {new Date(activeChallenge.endDate).toLocaleDateString()}
             </span>
           </div>
           <div>
-            Daily limit{' '}
-            <span className="text-slate-200">
-              {activeChallenge.rules?.maxSubmissionsPerDay || 5} / day
+            <span className="text-[10px] tracking-[0.2em] uppercase text-pine-400 block mb-0.5">Daily cap</span>
+            <span className="text-cream-100 font-semibold">
+              {activeChallenge.rules?.maxSubmissionsPerDay || 5} problems / day
             </span>
           </div>
           <div>
-            Scoring{' '}
-            <span className="text-slate-200 capitalize">
-              {activeChallenge.rules?.pointsPolicy || 'Manual host allocation'}
+            <span className="text-[10px] tracking-[0.2em] uppercase text-pine-400 block mb-0.5">Scoring</span>
+            <span className="text-cream-100 capitalize">
+              {activeChallenge.rules?.pointsPolicy || 'Host allocation'}
             </span>
           </div>
         </div>
@@ -76,36 +88,43 @@ export default function JoinChallengeCard({ activeChallenge, onChallengeJoined }
   }
 
   return (
-    <div className="lc-card p-4 space-y-3">
+    <div className="lc-card p-6 space-y-4">
       <div>
-        <h2 className="text-sm font-semibold text-white">Join a challenge</h2>
-        <p className="text-xs text-slate-400">Enter the join code from your host.</p>
+        <div className="lc-eyebrow mb-1">Cohort Enrollment</div>
+        <h2 className="font-serif text-2xl text-cream-50 font-normal">Join a challenge</h2>
+        <p className="text-xs text-ink-400 mt-1">
+          Enter the unique join code provided by your cohort host.
+        </p>
       </div>
 
       {errorMsg && (
-        <div className="flex items-start gap-2 text-xs text-hard">
+        <div className="p-3 rounded-sm border border-hard/40 bg-hard/10 flex items-start gap-2 text-xs text-hard">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="flex items-start gap-2 text-xs text-easy">
+        <div className="p-3 rounded-sm border border-easy/40 bg-easy/10 flex items-start gap-2 text-xs text-easy">
           <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {isParticipant ? (
-        <form onSubmit={handleJoin} className="flex flex-col sm:flex-row gap-2">
+        <form onSubmit={handleJoin} className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
             placeholder="SPRINT26"
-            className="lc-input uppercase font-mono flex-1"
+            className="lc-input uppercase font-mono tracking-[0.2em] text-peach-300 flex-1 py-2.5"
           />
-          <button type="submit" disabled={isLoading || !joinCode.trim()} className="lc-btn-primary">
+          <button
+            type="submit"
+            disabled={isLoading || !joinCode.trim()}
+            className="lc-btn-primary px-6 py-2.5"
+          >
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -117,7 +136,9 @@ export default function JoinChallengeCard({ activeChallenge, onChallengeJoined }
           </button>
         </form>
       ) : (
-        <p className="text-xs text-slate-400">Hosts create and manage challenges from this dashboard.</p>
+        <p className="text-xs text-ink-400">
+          As a host, you can provision and govern challenges from the management section below.
+        </p>
       )}
     </div>
   );
