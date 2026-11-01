@@ -57,7 +57,7 @@ const challengeSchema = new mongoose.Schema(
     rules: {
       maxSubmissionsPerDay: {
         type: Number,
-        default: 1,
+        default: null,
         min: [1, 'Max submissions per day must be at least 1'],
         max: [20, 'Max submissions per day cannot exceed 20'],
       },
