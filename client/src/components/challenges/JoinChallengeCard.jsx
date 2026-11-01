@@ -73,7 +73,9 @@ export default function JoinChallengeCard({ activeChallenge, onChallengeJoined }
           <div>
             <span className="text-[10px] tracking-[0.2em] uppercase text-pine-400 block mb-0.5">Daily cap</span>
             <span className="text-cream-100 font-semibold">
-              {activeChallenge.rules?.maxSubmissionsPerDay || 5} problems / day
+            {activeChallenge.rules?.maxSubmissionsPerDay == null
+                ? 'Unlimited'
+                : `${activeChallenge.rules.maxSubmissionsPerDay} problems / day`}
             </span>
           </div>
           <div>
