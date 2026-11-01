@@ -16,7 +16,6 @@ export default function SubmissionModal({ challenge, isOpen, onClose, onSubmissi
   };
 
   const todayStr = formatLocalDate(new Date());
-  const challengeStartStr = challenge?.startDate ? formatLocalDate(challenge.startDate) : '';
 
   const [formData, setFormData] = useState({
     problemTitle: '',
@@ -81,33 +80,37 @@ export default function SubmissionModal({ challenge, isOpen, onClose, onSubmissi
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-      <div className="lc-card w-full max-w-lg p-5 space-y-4">
-        <div className="flex items-start justify-between gap-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-950/80 backdrop-blur-sm">
+      <div className="lc-card w-full max-w-lg p-6 sm:p-8 space-y-5 border border-cream-100/15 shadow-frame bg-ink-900">
+        <div className="flex items-start justify-between gap-4 border-b border-cream-100/10 pb-4">
           <div>
-            <h2 className="text-sm font-semibold text-white">Submit a solve</h2>
-            <p className="text-xs text-slate-400">{challenge?.title}</p>
+            <div className="lc-eyebrow mb-1">New activity</div>
+            <h2 className="font-serif text-2xl text-cream-50 font-normal">Log LeetCode solve</h2>
+            <p className="text-xs text-ink-400 mt-0.5">{challenge?.title}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1">
-            <X className="w-4 h-4" />
+          <button
+            onClick={onClose}
+            className="text-ink-400 hover:text-cream-50 p-1 rounded-sm transition-colors"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {errorMsg && (
-          <div className="flex items-start gap-2 text-xs text-hard">
+          <div className="p-3 rounded-sm border border-hard/40 bg-hard/10 flex items-start gap-2 text-xs text-hard">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="flex items-start gap-2 text-xs text-easy">
+          <div className="p-3 rounded-sm border border-easy/40 bg-easy/10 flex items-start gap-2 text-xs text-easy">
             <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{successMsg}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3 text-sm">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="lc-label">Problem title *</label>
             <input
@@ -115,14 +118,14 @@ export default function SubmissionModal({ challenge, isOpen, onClose, onSubmissi
               name="problemTitle"
               value={formData.problemTitle}
               onChange={handleChange}
-              placeholder="1. Two Sum"
+              placeholder="e.g. 1. Two Sum"
               required
               className="lc-input"
             />
           </div>
 
           <div>
-            <label className="lc-label">LeetCode URL *</label>
+            <label className="lc-label">LeetCode Problem URL *</label>
             <input
               type="url"
               name="problemUrl"
@@ -134,9 +137,9 @@ export default function SubmissionModal({ challenge, isOpen, onClose, onSubmissi
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="lc-label">Difficulty</label>
+              <label className="lc-label">Difficulty *</label>
               <select
                 name="difficulty"
                 value={formData.difficulty}
@@ -148,57 +151,68 @@ export default function SubmissionModal({ challenge, isOpen, onClose, onSubmissi
                 <option value="Hard">Hard</option>
               </select>
             </div>
+
             <div>
-              <label className="lc-label">Completion date *</label>
+              <label className="lc-label">Date solved *</label>
               <input
                 type="date"
                 name="completionDate"
                 value={formData.completionDate}
-                min={challengeStartStr || undefined}
-                max={todayStr}
                 onChange={handleChange}
                 required
-                className="lc-input"
+                className="lc-input font-mono text-xs"
               />
             </div>
           </div>
 
           <div>
-            <label className="lc-label">Notes (optional)</label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              rows={2}
-              placeholder="Approach, complexity..."
-              className="lc-input resize-none"
-            />
-          </div>
-
-          <div>
-            <label className="lc-label">Evidence link (optional)</label>
+            <label className="lc-label">
+              Evidence / Submission screenshot URL <span className="text-ink-500 lowercase">(optional)</span>
+            </label>
             <input
               type="url"
               name="evidenceUrl"
               value={formData.evidenceUrl}
               onChange={handleChange}
-              placeholder="https://..."
+              placeholder="https://imgur.com/... or submission link"
               className="lc-input font-mono text-xs"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="lc-btn-secondary text-xs">
+          <div>
+            <label className="lc-label">
+              Approach notes <span className="text-ink-500 lowercase">(optional)</span>
+            </label>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              rows="3"
+              placeholder="Hash map for O(n) complement lookup, space-time trade-off..."
+              className="lc-input resize-none"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-cream-100/10">
+            <button
+              type="button"
+              onClick={onClose}
+              className="lc-btn-ghost text-xs"
+            >
               Cancel
             </button>
-            <button type="submit" disabled={isLoading} className="lc-btn-primary text-xs">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="lc-btn-primary px-5 py-2 text-xs"
+            >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   Submitting...
                 </>
               ) : (
-                'Submit'
+                'Submit for review'
               )}
             </button>
           </div>
