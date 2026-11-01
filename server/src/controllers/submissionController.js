@@ -375,7 +375,7 @@ const getReviewQueue = async (req, res, next) => {
 const reviewSubmission = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { decision, pointsAwarded, reviewNotes } = req.body;
+    const { action, decision, pointsAwarded, reviewNotes } = req.body;
 
     // Role check: Only Host or Admin
     if (req.user.role !== 'host' && req.user.role !== 'admin') {
@@ -386,7 +386,7 @@ const reviewSubmission = async (req, res, next) => {
     }
 
     // Validate decision
-    const normalizedDecision = decision && String(decision).toLowerCase().trim();
+    const normalizedDecision = String(decision ?? action ?? '').toLowerCase().trim();
     if (normalizedDecision !== 'approve' && normalizedDecision !== 'reject') {
       return res.status(400).json({
         success: false,
