@@ -3,85 +3,191 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --ink-950: #121416;
+    --ink-900: #181b1d;
+    --ink-850: #1e2224;
+    --ink-800: #272c2e;
+    --ink-700: #353b3d;
+    --ink-500: #6f7672;
+    --ink-400: #959b95;
+    --pine-900: #16271f;
+    --pine-800: #1d3429;
+    --pine-700: #28473a;
+    --pine-500: #4f7a63;
+    --pine-300: #9dbca6;
+    --cream-50: #faf5ec;
+    --cream-100: #f3ead9;
+    --cream-200: #e6d8bf;
+    --cream-300: #cbbb9f;
+    --peach-200: #f7d3b8;
+    --peach-300: #f2b48c;
+    --ember-500: #d9773f;
+    --ember-400: #e58f5c;
+    --ember-600: #b8602f;
+    --easy: #8fbf9c;
+    --medium: #e2ae58;
+    --hard: #d9695c;
+  }
+
   html,
   body {
-    @apply bg-slate-950 text-slate-100 font-sans antialiased;
+    background-color: #121416;
+    color: #f3ead9;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
   }
 
   input[type='date']::-webkit-calendar-picker-indicator {
-    filter: invert(0.8);
+    filter: invert(0.8) sepia(0.2) hue-rotate(330deg);
   }
 }
 
 @layer components {
+  /* Layout container */
   .lc-page {
-    @apply max-w-6xl mx-auto px-4 sm:px-6 py-5;
+    @apply max-w-6xl mx-auto px-4 sm:px-6 py-6;
   }
 
+  /* Editorial & typography helpers */
+  .lc-eyebrow {
+    @apply font-sans text-[11px] tracking-[0.32em] uppercase text-peach-300 flex items-center gap-3.5;
+  }
+  .lc-eyebrow::before {
+    content: "";
+    @apply w-8 h-px bg-current opacity-70 inline-block;
+  }
+
+  .lc-display {
+    @apply font-serif font-normal text-cream-50 tracking-tight;
+  }
+
+  /* Cards */
   .lc-card {
-    @apply bg-slate-900 border border-slate-800 rounded-lg;
+    background: linear-gradient(180deg, #181b1d, rgba(24, 27, 29, 0.75));
+    border: 1px solid rgba(243, 234, 217, 0.08);
+    border-radius: 4px;
+    transition: border-color 0.35s ease, transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.35s ease;
   }
 
+  .lc-card-lift:hover {
+    border-color: rgba(242, 180, 140, 0.28);
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.7);
+  }
+
+  .lc-card-pine {
+    background: linear-gradient(160deg, #1d3429, #16271f);
+    border-color: rgba(157, 188, 166, 0.18);
+  }
+
+  /* Inputs & form fields */
   .lc-input {
-    @apply w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40;
+    @apply w-full bg-[#121416]/70 border border-ink-700 rounded-sm px-3.5 py-2 text-sm text-cream-50 placeholder-ink-500 font-sans outline-none transition-colors duration-200;
   }
-
-  .lc-btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium transition disabled:opacity-50 disabled:pointer-events-none;
-  }
-
-  .lc-btn-primary {
-    @apply lc-btn bg-brand-500 hover:bg-brand-400 text-slate-950 px-3.5 py-1.5 font-semibold;
-  }
-
-  .lc-btn-secondary {
-    @apply lc-btn bg-slate-800 hover:bg-slate-700 text-slate-100 px-3 py-1.5 border border-slate-700;
-  }
-
-  .lc-btn-ghost {
-    @apply lc-btn text-slate-400 hover:text-white hover:bg-slate-800 px-2.5 py-1.5;
-  }
-
-  .lc-btn-success {
-    @apply lc-btn bg-easy hover:brightness-110 text-slate-950 px-3 py-1.5 font-semibold;
-  }
-
-  .lc-btn-danger {
-    @apply lc-btn border border-hard/40 text-hard hover:bg-hard/10 px-3 py-1.5;
+  .lc-input:focus {
+    border-color: #f2b48c;
+    box-shadow: 0 0 0 3px rgba(242, 180, 140, 0.12);
   }
 
   .lc-label {
-    @apply block text-xs font-medium text-slate-400 mb-1;
+    @apply block text-[10.5px] font-medium tracking-[0.22em] uppercase text-ink-400 mb-1.5;
   }
 
+  /* Buttons */
+  .lc-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm text-xs font-semibold tracking-[0.16em] uppercase transition-all duration-300 disabled:opacity-50 disabled:pointer-events-none cursor-pointer;
+  }
+
+  .lc-btn-primary {
+    @apply lc-btn bg-cream-100 hover:bg-peach-200 text-ink-950 px-4 py-2 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-10px_rgba(242,180,140,0.4)];
+  }
+
+  .lc-btn-ember {
+    @apply lc-btn bg-ember-500 hover:bg-ember-400 text-cream-50 px-4 py-2 shadow-sm;
+  }
+
+  .lc-btn-secondary {
+    @apply lc-btn bg-transparent hover:bg-cream-100/[0.06] text-cream-100 border border-cream-100/25 hover:border-cream-100/60 px-3.5 py-2;
+  }
+
+  .lc-btn-ghost {
+    @apply lc-btn text-ink-400 hover:text-cream-50 hover:bg-cream-100/[0.04] px-3 py-1.5;
+  }
+
+  .lc-btn-success {
+    @apply lc-btn bg-pine-700 hover:bg-pine-600 text-cream-50 border border-pine-500 px-3.5 py-1.5;
+  }
+
+  .lc-btn-danger {
+    @apply lc-btn bg-transparent hover:bg-hard/10 text-hard border border-hard/40 px-3 py-1.5;
+  }
+
+  /* Tabs */
   .lc-tab {
-    @apply px-2.5 py-1 rounded text-xs font-medium transition;
+    @apply text-[11px] tracking-[0.2em] uppercase py-2 px-3 font-semibold transition-colors duration-200 relative cursor-pointer;
   }
 
   .lc-tab-active {
-    @apply lc-tab bg-slate-800 text-white;
+    @apply lc-tab text-cream-50 after:content-[''] after:absolute after:left-2 after:right-2 after:-bottom-px after:h-[2px] after:bg-ember-500;
   }
 
   .lc-tab-idle {
-    @apply lc-tab text-slate-400 hover:text-slate-100;
+    @apply lc-tab text-ink-400 hover:text-cream-100;
   }
 
+  /* Badges & Tags */
   .lc-badge {
-    @apply inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-[0.2em] uppercase border;
+  }
+
+  .lc-badge-pending {
+    color: var(--medium);
+    border-color: rgba(226, 174, 88, 0.3);
+    background: rgba(226, 174, 88, 0.08);
+  }
+
+  .lc-badge-approved {
+    color: var(--easy);
+    border-color: rgba(143, 191, 156, 0.3);
+    background: rgba(143, 191, 156, 0.08);
+  }
+
+  .lc-badge-rejected {
+    color: var(--hard);
+    border-color: rgba(217, 105, 92, 0.3);
+    background: rgba(217, 105, 92, 0.08);
+  }
+
+  .lc-badge-role {
+    color: var(--peach-300);
+    border-color: rgba(242, 180, 140, 0.3);
+    background: rgba(242, 180, 140, 0.06);
   }
 }
 
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: #121416;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3e3e3e;
-  border-radius: 4px;
+  background: #272c2e;
+  border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #525252;
+  background: #353b3d;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
