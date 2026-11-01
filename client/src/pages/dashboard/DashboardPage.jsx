@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -6,7 +5,7 @@ import { getMyChallenges, getMySubmissions, createChallenge } from '../../servic
 import JoinChallengeCard from '../../components/challenges/JoinChallengeCard';
 import SubmissionModal from '../../components/submissions/SubmissionModal';
 import SubmissionsList from '../../components/submissions/SubmissionsList';
-import { ExternalLink, PlusCircle, Loader2 } from 'lucide-react';
+import { ExternalLink, PlusCircle, Loader2, X } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user, token, isHost, isParticipant } = useAuth();
@@ -93,46 +92,39 @@ export default function DashboardPage() {
   const pendingCount = submissions.filter((s) => s.status === 'Pending').length;
 
   return (
-    <div className="lc-page space-y-6">
-      <div className="relative isolate overflow-hidden rounded-2xl border border-white/[0.08] bg-[#090b12] px-6 py-8 shadow-2xl shadow-black/30 sm:px-9 sm:py-10">
-        <div className="pointer-events-none absolute -right-24 -top-32 -z-10 h-80 w-80 rounded-full bg-orange-500/[0.12] blur-[100px]" />
-        <div className="pointer-events-none absolute -bottom-32 left-1/3 -z-10 h-64 w-64 rounded-full bg-violet-500/[0.07] blur-[100px]" />
+    <div className="lc-page space-y-8">
+      {/* Editorial Dashboard Hero with Dawn Ridge dim band */}
+      <div className="relative overflow-hidden rounded border border-cream-100/10 min-h-[220px] p-6 sm:p-10 flex flex-col justify-end shadow-frame">
+        {/* Background photo band */}
+        <div
+          className="absolute inset-0 bg-cover bg-[center_35%] filter saturate-[0.85] opacity-50"
+          style={{ backgroundImage: "url('/dawn-ridge.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/90 to-ink-950/40" />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink-950/80 to-transparent" />
 
-        <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
-          <div className="max-w-2xl">
-            <div className="mb-5 flex items-center gap-3">
-              <span className="h-px w-8 bg-orange-500" />
-              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-orange-400">
-                {isHost ? 'HOST CONTROL CENTER' : 'YOUR COMPETITIVE SPACE'}
-              </p>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <div className="lc-eyebrow mb-2">
+              {isHost ? 'Host Command Center' : 'Your Competitive Space'}
             </div>
-
-            <h1 className="text-3xl font-black tracking-tight text-white sm:text-5xl">
-              Welcome back,
-              <span className="block bg-gradient-to-r from-orange-300 via-orange-500 to-amber-500 bg-clip-text text-transparent">
+            <h1 className="font-serif font-normal text-4xl sm:text-6xl text-cream-50 leading-[0.98]">
+              Welcome back,<br />
+              <em className="italic text-peach-200">
                 {user?.name?.split(' ')[0] || 'Champion'}.
-              </span>
+              </em>
             </h1>
-
-            <p className="mt-4 max-w-lg text-sm leading-6 text-slate-400">
+            <p className="mt-3 text-xs sm:text-sm text-cream-200/80 max-w-lg">
               {isHost
-                ? 'Your challenges. Your community. Keep the competition moving.'
-                : 'Sharpen your skills, solve problems, and climb the leaderboard.'}
+                ? 'Oversee submissions, verify LeetCode activity, and steward cohort standings.'
+                : 'Log canonical solves, track approval reviews, and climb the standings.'}
             </p>
-
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.07] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                {isHost ? 'Host access' : 'Participant access'}
-              </span>
-              <span className="text-xs text-slate-600">{user?.email}</span>
-            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <Link
               to="/leaderboard"
-              className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3 text-xs font-semibold text-slate-200 transition hover:border-white/20 hover:bg-white/[0.08]"
+              className="lc-btn-secondary py-2.5 px-4 text-xs"
             >
               Leaderboard
             </Link>
@@ -140,74 +132,76 @@ export default function DashboardPage() {
             {isParticipant && activeChallenge && (
               <button
                 onClick={() => setIsSubmitModalOpen(true)}
-                className="lc-btn-primary inline-flex items-center gap-2 rounded-xl px-5 py-3 text-xs font-bold shadow-lg shadow-orange-500/10"
+                className="lc-btn-primary py-2.5 px-4 text-xs group"
               >
-                <PlusCircle size={15} />
-                Submit problem
+                <PlusCircle className="w-4 h-4 text-ink-950" />
+                <span>Submit problem</span>
               </button>
             )}
 
             {isHost && (
               <Link
                 to="/host/review"
-                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-xs font-bold text-black shadow-lg shadow-orange-500/20 transition hover:bg-orange-400"
+                className="lc-btn-primary py-2.5 px-4 text-xs flex items-center gap-2"
               >
-                Review queue
-                <ExternalLink size={14} />
+                <span>Review queue</span>
+                <ExternalLink className="w-3.5 h-3.5" />
               </Link>
             )}
           </div>
         </div>
       </div>
 
-      
       {isLoadingData ? (
-        <div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-white/[0.06] bg-[#0b0d14]">
+        <div className="flex min-h-[260px] items-center justify-center rounded border border-cream-100/10 bg-ink-900/50">
           <div className="flex flex-col items-center gap-3">
-            <Loader2 className="h-7 w-7 animate-spin text-orange-400" />
-            <p className="text-xs font-medium tracking-wide text-slate-500">
-              LOADING YOUR WORKSPACE
-            </p>
+            <Loader2 className="h-6 w-6 animate-spin text-peach-300" />
+            <span className="text-[10px] uppercase tracking-[0.24em] text-ink-400">
+              Loading workspace...
+            </span>
           </div>
         </div>
       ) : (
         <>
+          {/* Active Challenge Status */}
           <JoinChallengeCard
             activeChallenge={activeChallenge}
             onChallengeJoined={handleChallengeJoined}
           />
 
+          {/* Participant Stat Numerals (Serif Display) */}
           {isParticipant && (
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-2xl border border-white/[0.07] bg-[#0b0d14] p-4">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Submitted
+            <div className="grid grid-cols-1 sm:grid-cols-3 border border-cream-100/10 rounded overflow-hidden divide-y sm:divide-y-0 sm:divide-x divide-cream-100/10 bg-ink-900/60">
+              <div className="p-6">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-ink-500">
+                  Submitted Solves
                 </div>
-                <div className="mt-2 text-3xl font-black text-white">
+                <div className="font-serif text-4xl sm:text-5xl text-cream-50 mt-1 leading-tight">
                   {submissions.length}
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-amber-500/10 bg-[#0b0d14] p-4">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Pending
+              <div className="p-6">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-ink-500">
+                  Pending Review
                 </div>
-                <div className="mt-2 text-3xl font-black text-amber-400">
+                <div className="font-serif text-4xl sm:text-5xl text-medium mt-1 leading-tight">
                   {pendingCount}
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-emerald-500/10 bg-[#0b0d14] p-4">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Approved
+              <div className="p-6">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-ink-500">
+                  Approved &amp; Verified
                 </div>
-                <div className="mt-2 text-3xl font-black text-emerald-400">
+                <div className="font-serif text-4xl sm:text-5xl text-easy mt-1 leading-tight">
                   {approvedCount}
                 </div>
               </div>
             </div>
           )}
 
+          {/* Submissions List */}
           {isParticipant && activeChallenge && (
             <SubmissionsList
               submissions={submissions}
@@ -215,67 +209,65 @@ export default function DashboardPage() {
             />
           )}
 
+          {/* Host Challenge Management Grid */}
           {isHost && (
-            <section className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0b0d14]">
-              <div className="flex flex-col gap-3 border-b border-white/[0.06] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <section className="lc-card overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 border-b border-cream-100/10">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-orange-400">
-                    MANAGEMENT
-                  </p>
-                  <h2 className="mt-1 text-xl font-bold tracking-tight text-white">
+                  <div className="lc-eyebrow mb-1">Management</div>
+                  <h2 className="font-serif text-2xl text-cream-50 font-normal">
                     Your challenges
                   </h2>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Manage your competitive programming events.
+                  <p className="text-xs text-ink-400 mt-0.5">
+                    Configure and govern your cohort programming events.
                   </p>
                 </div>
 
                 <button
                   onClick={() => setIsCreateChallengeModalOpen(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-3 text-xs font-bold text-black shadow-lg shadow-orange-500/10 transition hover:bg-orange-400"
+                  className="lc-btn-primary py-2.5 px-4 text-xs"
                 >
-                  <PlusCircle className="h-4 w-4" />
+                  <PlusCircle className="w-4 h-4 mr-1.5" />
                   Create challenge
                 </button>
               </div>
 
-              <div className="p-5 sm:p-6">
+              <div className="p-6">
                 {challenges.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-white/10 px-4 py-12 text-center">
-                    <p className="text-sm font-medium text-slate-300">
-                      No challenges yet
+                  <div className="rounded border border-dashed border-cream-100/15 p-12 text-center">
+                    <p className="font-serif italic text-lg text-cream-200">
+                      No challenges provisioned yet
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Create your first challenge to get started.
+                    <p className="mt-1 text-xs text-ink-500">
+                      Create your first cohort challenge to distribute join codes.
                     </p>
                   </div>
                 ) : (
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-4 md:grid-cols-2">
                     {challenges.map((c) => (
                       <div
                         key={c._id}
-                        className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 transition hover:border-orange-500/30 hover:bg-white/[0.035]"
+                        className="lc-card lc-card-lift p-5 space-y-4"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <h3 className="truncate text-sm font-bold text-white">
+                            <h3 className="font-serif text-2xl text-cream-50 font-normal truncate">
                               {c.title}
                             </h3>
-                            <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">
+                            <p className="mt-1 text-xs text-ink-400 line-clamp-2 leading-relaxed">
                               {c.description || 'No description provided.'}
                             </p>
                           </div>
-
-                          <span className="shrink-0 rounded-full border border-emerald-500/20 bg-emerald-500/[0.07] px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-emerald-400">
+                          <span className="lc-badge lc-badge-approved shrink-0">
                             {c.status}
                           </span>
                         </div>
 
-                        <div className="mt-5 flex items-center justify-between border-t border-white/[0.06] pt-3">
-                          <span className="text-[9px] font-semibold uppercase tracking-widest text-slate-600">
-                            JOIN CODE
+                        <div className="flex items-center justify-between pt-3 border-t border-cream-100/10 text-xs">
+                          <span className="text-[10px] uppercase tracking-[0.24em] text-ink-500">
+                            Join Code
                           </span>
-                          <span className="rounded-md bg-orange-500/10 px-2.5 py-1 font-mono text-xs font-bold tracking-wider text-orange-400">
+                          <span className="font-mono text-base tracking-[0.2em] text-peach-300 font-semibold">
                             {c.joinCode}
                           </span>
                         </div>
@@ -287,51 +279,48 @@ export default function DashboardPage() {
             </section>
           )}
 
-          <section className="rounded-2xl border border-white/[0.07] bg-[#0b0d14] p-5 sm:p-6">
-            <div className="mb-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-orange-400">
-                ACCOUNT
-              </p>
-              <h2 className="mt-1 text-lg font-bold text-white">Profile details</h2>
+          {/* Account Profile Card */}
+          <section className="lc-card p-6">
+            <div className="mb-4">
+              <div className="lc-eyebrow mb-1">Account credentials</div>
+              <h2 className="font-serif text-xl text-cream-50 font-normal">Profile Details</h2>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2 border-t border-cream-100/10 text-xs">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                <span className="text-[10px] tracking-[0.2em] uppercase text-ink-500 block mb-1">
                   Email
-                </div>
-                <div className="mt-2 break-all text-sm text-slate-300">
+                </span>
+                <span className="text-cream-100 font-mono text-[12px] break-all">
                   {user?.email}
-                </div>
+                </span>
               </div>
 
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                <span className="text-[10px] tracking-[0.2em] uppercase text-ink-500 block mb-1">
                   Role
-                </div>
-                <div className="mt-2 text-sm font-semibold capitalize text-slate-300">
+                </span>
+                <span className="lc-badge lc-badge-role capitalize">
                   {user?.role}
-                </div>
+                </span>
               </div>
 
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
-                  LeetCode
-                </div>
+                <span className="text-[10px] tracking-[0.2em] uppercase text-ink-500 block mb-1">
+                  LeetCode Handle
+                </span>
                 {user?.leetcodeUsername ? (
                   <a
                     href={`https://leetcode.com/u/${user.leetcodeUsername}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-orange-400 transition hover:text-orange-300"
+                    className="inline-flex items-center gap-1.5 text-peach-300 hover:text-cream-50 font-mono text-xs transition-colors"
                   >
-                    {user.leetcodeUsername}
-                    <ExternalLink className="h-3.5 w-3.5" />
+                    <span>@{user.leetcodeUsername}</span>
+                    <ExternalLink className="h-3 w-3" />
                   </a>
                 ) : (
-                  <span className="mt-2 block text-sm italic text-slate-600">
-                    Not set
-                  </span>
+                  <span className="text-ink-500 italic">Not specified</span>
                 )}
               </div>
             </div>
@@ -339,7 +328,7 @@ export default function DashboardPage() {
         </>
       )}
 
-      
+      {/* Submission Modal */}
       {activeChallenge && (
         <SubmissionModal
           challenge={activeChallenge}
@@ -349,47 +338,41 @@ export default function DashboardPage() {
         />
       )}
 
+      {/* Create Challenge Modal for Hosts */}
       {isHost && isCreateChallengeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg space-y-5 rounded-2xl border border-white/10 bg-[#0d1019] p-6 shadow-2xl shadow-black/50">
-            <div className="flex items-start justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-950/80 backdrop-blur-sm">
+          <div className="lc-card w-full max-w-lg p-6 sm:p-8 space-y-5 border border-cream-100/15 shadow-frame bg-ink-900">
+            <div className="flex items-start justify-between gap-3 border-b border-cream-100/10 pb-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-orange-400">
-                  HOST WORKSPACE
-                </p>
-                <h3 className="mt-1 text-xl font-bold text-white">
-                  Create challenge
-                </h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  Set up your next competitive sprint.
-                </p>
+                <div className="lc-eyebrow mb-1">Host Provisioning</div>
+                <h3 className="font-serif text-2xl text-cream-50 font-normal">Create Challenge</h3>
+                <p className="text-xs text-ink-400 mt-0.5">Define dates and join code for the cohort.</p>
               </div>
-
               <button
                 onClick={() => setIsCreateChallengeModalOpen(false)}
-                className="rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-400 transition hover:bg-white/5 hover:text-white"
+                className="text-ink-400 hover:text-cream-50 p-1"
               >
-                Close
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {createChallengeError && (
-              <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-400">
+              <div className="p-3 rounded-sm border border-hard/40 bg-hard/10 text-xs text-hard">
                 {createChallengeError}
               </div>
             )}
 
-            <form onSubmit={handleCreateChallenge} className="space-y-4 text-sm">
+            <form onSubmit={handleCreateChallenge} className="space-y-4">
               <div>
                 <label className="lc-label">Title *</label>
                 <input
                   type="text"
-                  required
-                  placeholder="Winter 2026 30-Day Sprint"
                   value={newChallengeForm.title}
                   onChange={(e) =>
                     setNewChallengeForm({ ...newChallengeForm, title: e.target.value })
                   }
+                  placeholder="e.g. Winter 2026 Sprint"
+                  required
                   className="lc-input"
                 />
               </div>
@@ -397,21 +380,20 @@ export default function DashboardPage() {
               <div>
                 <label className="lc-label">Description</label>
                 <textarea
-                  rows="3"
-                  placeholder="Goals, target problem count, rules..."
                   value={newChallengeForm.description}
                   onChange={(e) =>
                     setNewChallengeForm({ ...newChallengeForm, description: e.target.value })
                   }
+                  placeholder="Goals, target problem patterns, expectations..."
+                  rows="2"
                   className="lc-input resize-none"
                 />
               </div>
 
               <div>
-                <label className="lc-label">Join code (optional)</label>
+                <label className="lc-label">Join Code *</label>
                 <input
                   type="text"
-                  placeholder="Leave blank for a random code"
                   value={newChallengeForm.joinCode}
                   onChange={(e) =>
                     setNewChallengeForm({
@@ -419,56 +401,60 @@ export default function DashboardPage() {
                       joinCode: e.target.value.toUpperCase(),
                     })
                   }
-                  className="lc-input font-mono"
+                  placeholder="SPRINT26"
+                  required
+                  className="lc-input font-mono uppercase text-peach-300 tracking-[0.2em]"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="lc-label">Start *</label>
+                  <label className="lc-label">Start Date *</label>
                   <input
                     type="date"
-                    required
                     value={newChallengeForm.startDate}
                     onChange={(e) =>
                       setNewChallengeForm({ ...newChallengeForm, startDate: e.target.value })
                     }
-                    className="lc-input"
+                    required
+                    className="lc-input font-mono text-xs"
                   />
                 </div>
-
                 <div>
-                  <label className="lc-label">End *</label>
+                  <label className="lc-label">End Date *</label>
                   <input
                     type="date"
-                    required
                     value={newChallengeForm.endDate}
                     onChange={(e) =>
                       setNewChallengeForm({ ...newChallengeForm, endDate: e.target.value })
                     }
-                    className="lc-input"
+                    required
+                    className="lc-input font-mono text-xs"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 border-t border-white/[0.06] pt-4">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-cream-100/10">
                 <button
                   type="button"
                   onClick={() => setIsCreateChallengeModalOpen(false)}
-                  className="rounded-xl border border-white/10 px-5 py-3 text-xs font-semibold text-slate-300 transition hover:bg-white/5"
+                  className="lc-btn-ghost text-xs"
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
                   disabled={createChallengeLoading}
-                  className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-xs font-bold text-black transition hover:bg-orange-400 disabled:opacity-50"
+                  className="lc-btn-primary px-5 py-2 text-xs"
                 >
-                  {createChallengeLoading && (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {createChallengeLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create cohort challenge'
                   )}
-                  {createChallengeLoading ? 'Creating...' : 'Create challenge'}
                 </button>
               </div>
             </form>
