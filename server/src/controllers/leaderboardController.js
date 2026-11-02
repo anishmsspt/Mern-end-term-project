@@ -3,38 +3,32 @@ const Challenge = require('../models/Challenge');
 const ChallengeMembership = require('../models/ChallengeMembership');
 const Submission = require('../models/Submission');
 
-// Convert a timestamp to a calendar-day key in Asia/Kolkata (UTC+05:30).
-const istDayKey = (value) => {
-  const date = new Date(value);
-  return new Date(date.getTime() + 330 * 60 * 1000).toISOString().slice(0, 10);
-};
+const { istDateKey } = require('../utils/istDate');
 
-const dayKeyToUtcDay = (key) => {
+const dayNumber = (key) => {
   const [year, month, day] = key.split('-').map(Number);
-  return Date.UTC(year, month - 1, day);
+  return Math.floor(Date.UTC(year, month - 1, day) / 86400000);
 };
 
-// Streaks count distinct IST days with at least one host-approved submission.
-const calculateStreaks = (timestamps, todayKey = istDayKey(new Date())) => {
-  const days = [...new Set(timestamps.map(istDayKey))].sort();
-  if (days.length === 0) return { currentStreak: 0, longestStreak: 0, activeDays: 0 };
+// One approved solve on a calendar day is enough to keep the streak alive.
+const calculateStreaks = (timestamps, todayKey = istDateKey()) => {
+  const days = [...new Set((timestamps || []).filter(Boolean).map((value) => istDateKey(new Date(value))))].sort();
+  if (!days.length) return { currentStreak: 0, longestStreak: 0, activeDays: 0 };
 
   let longestStreak = 1;
   let run = 1;
   for (let i = 1; i < days.length; i += 1) {
-    const difference = (dayKeyToUtcDay(days[i]) - dayKeyToUtcDay(days[i - 1])) / 86400000;
-    run = difference === 1 ? run + 1 : 1;
+    run = dayNumber(days[i]) - dayNumber(days[i - 1]) === 1 ? run + 1 : 1;
     longestStreak = Math.max(longestStreak, run);
   }
 
-  const yesterday = new Date(dayKeyToUtcDay(todayKey) - 86400000).toISOString().slice(0, 10);
-  let currentStreak = 0;
   const latestDay = days[days.length - 1];
-  if (latestDay === todayKey || latestDay === yesterday) {
+  const daysSinceLatest = dayNumber(todayKey) - dayNumber(latestDay);
+  let currentStreak = 0;
+  if (daysSinceLatest === 0 || daysSinceLatest === 1) {
     currentStreak = 1;
     for (let i = days.length - 1; i > 0; i -= 1) {
-      const difference = (dayKeyToUtcDay(days[i]) - dayKeyToUtcDay(days[i - 1])) / 86400000;
-      if (difference !== 1) break;
+      if (dayNumber(days[i]) - dayNumber(days[i - 1]) !== 1) break;
       currentStreak += 1;
     }
   }
@@ -142,14 +136,15 @@ const getChallengeLeaderboard = async (req, res, next) => {
       },
     ]);
 
-    // Streaks always use the participant's full approved history, even in weekly view.
+    // Streaks always use full approved history, even in weekly leaderboard view.
     const approvedDates = await Submission.aggregate([
       { $match: { challenge: challenge._id, status: 'Approved' } },
       { $group: { _id: '$participant', completionDates: { $addToSet: '$completionDate' } } },
     ]);
-    const streaksByParticipant = new Map(
-      approvedDates.map((group) => [String(group._id), calculateStreaks(group.completionDates)])
-    );
+    const streaksByParticipant = new Map(approvedDates.map((group) => [
+      String(group._id),
+      calculateStreaks(group.completionDates),
+    ]));
 
     const approvedByParticipant = new Map();
     approvedGroups.forEach((group) => {
