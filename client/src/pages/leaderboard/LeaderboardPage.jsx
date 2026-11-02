@@ -294,6 +294,7 @@ export default function LeaderboardPage() {
                   <th className="px-6 py-3.5">Participant</th>
                   <th className="px-6 py-3.5 text-right">Score</th>
                   <th className="px-6 py-3.5 text-right">Solves</th>
+                  <th className="px-6 py-3.5 text-right">Streak</th>
                   <th className="px-6 py-3.5">E / M / H</th>
                   <th className="px-6 py-3.5 text-right">Latest solve</th>
                 </tr>
@@ -301,7 +302,7 @@ export default function LeaderboardPage() {
               <tbody className="divide-y divide-cream-100/[0.05]">
                 {standings.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-14 font-serif italic text-lg text-ink-400">
+                    <td colSpan="7" className="text-center py-14 font-serif italic text-lg text-ink-400">
                       No participants have joined this challenge yet.
                     </td>
                   </tr>
@@ -360,6 +361,10 @@ export default function LeaderboardPage() {
                         </td>
                         <td className="px-6 py-3.5 text-right font-mono text-xs text-cream-200">
                           {entry.solvedCount}
+                        </td>
+                        <td className="px-6 py-3.5 text-right whitespace-nowrap">
+                          <span className="font-semibold text-orange-300">🔥 {entry.currentStreak || 0}</span>
+                          <span className="block text-[10px] text-ink-500">{entry.longestStreak || 0} best</span>
                         </td>
                         <td className="px-6 py-3.5 font-mono text-xs">
                           <span className="text-easy">{entry.easyCount || 0}</span>
