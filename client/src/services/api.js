@@ -8,6 +8,24 @@ const BASE_URL = import.meta.env.VITE_API_URL || '';
 export const API_BASE_URL = BASE_URL;
 
 /**
+ * Leaderboard refresh signalling (no WebSockets, no new dependencies).
+ * Any action that can change standings (join, submit, approve, reject) calls
+ * notifyLeaderboardChanged(). The Leaderboard page listens for the same-tab
+ * custom event and for the cross-tab `storage` event and re-fetches.
+ */
+export const LEADERBOARD_CHANGED_EVENT = 'unanimous:leaderboard-changed';
+export const LEADERBOARD_CHANGED_STORAGE_KEY = 'unanimous_leaderboard_changed_at';
+
+export function notifyLeaderboardChanged() {
+  try {
+    localStorage.setItem(LEADERBOARD_CHANGED_STORAGE_KEY, String(Date.now()));
+    window.dispatchEvent(new Event(LEADERBOARD_CHANGED_EVENT));
+  } catch {
+    // Storage may be unavailable (private mode); polling still keeps data fresh.
+  }
+}
+
+/**
  * Standard HTTP request wrapper with JSON error handling
  */
 async function request(endpoint, options = {}) {
@@ -69,11 +87,13 @@ export async function getMeProfile(token) {
 /* ==================== Challenge Services ==================== */
 
 export async function joinChallenge(joinCode, token) {
-  return request('/api/challenges/join', {
+  const data = await request('/api/challenges/join', {
     method: 'POST',
     token,
     body: JSON.stringify({ joinCode }),
   });
+  notifyLeaderboardChanged();
+  return data;
 }
 
 export async function getMyChallenges(token) {
@@ -101,11 +121,13 @@ export async function getChallengeById(id, token) {
 /* ==================== Submission Services ==================== */
 
 export async function submitProblem(submissionData, token) {
-  return request('/api/submissions', {
+  const data = await request('/api/submissions', {
     method: 'POST',
     token,
     body: JSON.stringify(submissionData),
   });
+  notifyLeaderboardChanged();
+  return data;
 }
 
 export async function getMySubmissions(challengeId, token) {
@@ -141,11 +163,13 @@ export async function getReviewQueue(params = {}, token) {
 }
 
 export async function reviewSubmission(submissionId, reviewData, token) {
-  return request(`/api/submissions/${submissionId}/review`, {
+  const data = await request(`/api/submissions/${submissionId}/review`, {
     method: 'POST',
     token,
     body: JSON.stringify(reviewData),
   });
+  notifyLeaderboardChanged();
+  return data;
 }
 
 /* ==================== Leaderboard Services ==================== */
@@ -155,5 +179,6 @@ export async function getChallengeLeaderboard(challengeId, timeframe, token) {
   return request(`/api/leaderboard/${challengeId}${query}`, {
     method: 'GET',
     token,
+    cache: 'no-store',
   });
 }
