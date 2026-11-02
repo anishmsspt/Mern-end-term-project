@@ -2,6 +2,14 @@ const mongoose = require('mongoose');
 
 const submissionSchema = new mongoose.Schema(
   {
+    source: { type: String, enum: ['manual', 'automated'], default: 'manual', index: true },
+    activeDuplicateKey: { type: String, default: undefined },
+    leetcode: {
+      submissionId: { type: String, default: '' },
+      username: { type: String, default: '' },
+      submittedAt: { type: Date, default: null },
+      enrollment: { type: mongoose.Schema.Types.ObjectId, ref: 'AutomationEnrollment', default: null },
+    },
     participant: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -33,6 +41,7 @@ const submissionSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
+    difficultyVerified: { type: Boolean, default: false },
     difficulty: {
       type: String,
       enum: {
@@ -105,6 +114,14 @@ submissionSchema.index({ challenge: 1, status: 1, createdAt: 1 });
 
 // 3. Duplicate check acceleration
 submissionSchema.index({ participant: 1, challenge: 1, problemSlug: 1, status: 1 });
+
+// A LeetCode accepted submission can be imported only once per challenge.
+submissionSchema.index({ activeDuplicateKey: 1 }, { unique: true, sparse: true });
+
+submissionSchema.index(
+  { challenge: 1, 'leetcode.submissionId': 1 },
+  { unique: true, partialFilterExpression: { 'leetcode.submissionId': { $type: 'string', $gt: '' } } }
+);
 
 const Submission = mongoose.model('Submission', submissionSchema);
 

@@ -185,9 +185,9 @@ const provisionHost = async (req, res, next) => {
       });
     }
 
-    // 4. Resolve credentials from request body or fallback to BOOTSTRAP_HOST_* env
-    const email = (req.body && req.body.email) || process.env.BOOTSTRAP_HOST_EMAIL || 'host@unanimous.dev';
-    const password = (req.body && req.body.password) || process.env.BOOTSTRAP_HOST_PASSWORD || 'HostAdmin2026!';
+    // 4. Resolve credentials only from explicit request values or configured environment.
+    const email = (req.body && req.body.email) || process.env.BOOTSTRAP_HOST_EMAIL;
+    const password = (req.body && req.body.password) || process.env.BOOTSTRAP_HOST_PASSWORD;
     const name = (req.body && req.body.name) || process.env.BOOTSTRAP_HOST_NAME || 'Primary Challenge Host';
     const leetcodeUsername = (req.body && req.body.leetcodeUsername) || process.env.BOOTSTRAP_HOST_LEETCODE || 'unanimous_host';
 

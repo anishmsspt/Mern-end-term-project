@@ -115,6 +115,7 @@ describe('Phase 4: Host Review Queue & Approval/Rejection Workflow Tests', () =>
       problemUrl: 'https://leetcode.com/problems/3sum/',
       problemSlug: '3sum',
       difficulty: 'Medium',
+      difficultyVerified: true,
       completionDate: new Date(),
       status: 'Pending',
       notes: 'Used two pointers approach.',
@@ -220,41 +221,23 @@ describe('Phase 4: Host Review Queue & Approval/Rejection Workflow Tests', () =>
       assert.equal(res.body.success, false);
     });
 
-    test('Point validation rejects zero, negative, fractional, and non-numeric points', async () => {
-      // 0 points
-      const resZero = await request(app)
+    test('Server ignores host-supplied points and uses the verified difficulty preset', async () => {
+      const res = await request(app)
         .post(`/api/submissions/${submission1._id}/review`)
         .set('Authorization', `Bearer ${hostAToken}`)
-        .send({ decision: 'approve', pointsAwarded: 0 });
-      assert.equal(resZero.status, 400);
+        .send({ decision: 'approve', pointsAwarded: 999, reviewNotes: 'Verified.' });
+      assert.equal(res.status, 200);
+      assert.equal(res.body.submission.pointsAwarded, 25);
+    });
 
-      // Negative points
-      const resNeg = await request(app)
+    test('Approval is blocked until difficulty has been verified', async () => {
+      await Submission.updateOne({ _id: submission1._id }, { $set: { difficultyVerified: false } });
+      const res = await request(app)
         .post(`/api/submissions/${submission1._id}/review`)
         .set('Authorization', `Bearer ${hostAToken}`)
-        .send({ decision: 'approve', pointsAwarded: -10 });
-      assert.equal(resNeg.status, 400);
-
-      // Fractional points
-      const resFrac = await request(app)
-        .post(`/api/submissions/${submission1._id}/review`)
-        .set('Authorization', `Bearer ${hostAToken}`)
-        .send({ decision: 'approve', pointsAwarded: 12.5 });
-      assert.equal(resFrac.status, 400);
-
-      // Over maximum limit (> 100)
-      const resMax = await request(app)
-        .post(`/api/submissions/${submission1._id}/review`)
-        .set('Authorization', `Bearer ${hostAToken}`)
-        .send({ decision: 'approve', pointsAwarded: 150 });
-      assert.equal(resMax.status, 400);
-
-      // Non-numeric / missing points
-      const resMissing = await request(app)
-        .post(`/api/submissions/${submission1._id}/review`)
-        .set('Authorization', `Bearer ${hostAToken}`)
-        .send({ decision: 'approve', pointsAwarded: 'many' });
-      assert.equal(resMissing.status, 400);
+        .send({ decision: 'approve', pointsAwarded: 25 });
+      assert.equal(res.status, 409);
+      assert.match(res.body.message, /difficulty has been verified/i);
     });
 
     test('PREVENTS DOUBLE-APPROVAL: Already approved submission cannot be approved again (409 Conflict)', async () => {
@@ -276,7 +259,7 @@ describe('Phase 4: Host Review Queue & Approval/Rejection Workflow Tests', () =>
 
       // Verify points in DB did NOT change
       const dbSub = await Submission.findById(submission1._id);
-      assert.equal(dbSub.pointsAwarded, 15);
+      assert.equal(dbSub.pointsAwarded, 25);
     });
   });
 
@@ -356,7 +339,7 @@ describe('Phase 4: Host Review Queue & Approval/Rejection Workflow Tests', () =>
 
       assert.equal(res.status, 200);
       assert.equal(res.body.submission.status, 'Approved');
-      assert.equal(res.body.submission.pointsAwarded, 30);
+      assert.equal(res.body.submission.pointsAwarded, 25);
       assert.equal(res.body.submission.reviewNotes, 'Great explanation!');
     });
 

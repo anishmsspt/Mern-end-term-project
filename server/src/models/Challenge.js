@@ -54,6 +54,11 @@ const challengeSchema = new mongoose.Schema(
       default: 'active',
       index: true,
     },
+    automation: {
+      enabled: { type: Boolean, default: false },
+      enabledAt: { type: Date, default: null },
+      enabledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    },
     rules: {
       maxSubmissionsPerDay: {
         type: Number,
@@ -72,12 +77,12 @@ const challengeSchema = new mongoose.Schema(
       pointsPolicy: {
         type: String,
         enum: ['manual', 'difficulty_preset'],
-        default: 'manual',
+        default: 'difficulty_preset',
       },
       defaultPoints: {
-        easy: { type: Number, default: 1, min: 0 },
-        medium: { type: Number, default: 3, min: 0 },
-        hard: { type: Number, default: 5, min: 0 },
+        easy: { type: Number, default: 10, min: 0 },
+        medium: { type: Number, default: 25, min: 0 },
+        hard: { type: Number, default: 50, min: 0 },
       },
     },
   },

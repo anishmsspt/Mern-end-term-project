@@ -120,10 +120,7 @@ copy client\.env.example client\.env
 ```bash
 npm run bootstrap:host --prefix server
 ```
-Default evaluation credentials:
-- **Email:** `host@unanimous.dev`
-- **Password:** `HostAdmin2026!`
-- **Role:** `host`
+Set `BOOTSTRAP_HOST_EMAIL` and `BOOTSTRAP_HOST_PASSWORD` in `server/.env` before running the bootstrap command. The bootstrap script intentionally has no built-in default password. The created account receives the `host` role.
 
 ### 5. Running the Application
 ```bash
@@ -136,7 +133,7 @@ npm run dev
 
 ### 6. Automated Test Suite & Build Verification
 ```bash
-# Run complete backend test suite (47 tests across 16 suites):
+# Run backend tests:
 npm test --prefix server
 
 # Run frontend production build:
@@ -179,10 +176,54 @@ Standings on `/leaderboard` are calculated dynamically via a MongoDB aggregation
 ## 🧪 Evaluation & Demo Walkthrough
 
 1. **Start Dev Servers:** Run `npm run dev`.
-2. **Log in as Host:** Go to `http://localhost:5173/login` and log in with `host@unanimous.dev` / `HostAdmin2026!`.
+2. **Log in as Host:** Use the email and unique password configured in `server/.env` as `BOOTSTRAP_HOST_EMAIL` and `BOOTSTRAP_HOST_PASSWORD`.
 3. **Copy Join Code:** On the Host Dashboard, find the active challenge (e.g. `SPRINT26`) or create one.
 4. **Register Participant:** Log out, click Register, and create a participant account (e.g., `alice@student.edu`).
 5. **Join Challenge:** On the Participant Dashboard, enter `SPRINT26` and click **Join Challenge**.
-6. **Submit Solution:** Click **Submit Daily Problem**, provide a valid LeetCode URL (`https://leetcode.com/problems/two-sum/`), select difficulty, and submit.
+6. **Submit Solution:** Click **Submit Daily Problem**, provide a valid LeetCode URL (`https://leetcode.com/problems/two-sum/`), and submit. Difficulty is fetched and verified by the server.
 7. **Host Review:** Log back in as Host, navigate to `/host/review`, find Alice's pending submission, and click **Approve** (allocate 10 points).
 8. **Check Leaderboard:** Navigate to `/leaderboard` (or view on dashboard). Alice now appears at Rank #1 with 10 points, 1 solve, and a detailed difficulty breakdown.
+
+## LeetCode automatic submission sync
+
+The optional automation feature imports recent Accepted submissions from a participant's **verified public LeetCode account** into the existing host review queue. It is disabled by default for each challenge.
+
+### Host setup
+
+1. Deploy the backend with the existing persistent MongoDB Atlas `MONGODB_URI`.
+2. In the GitHub repository, add an Actions secret named `MONGODB_URI` containing the same database connection string. Do not commit it to the repository.
+3. Ensure GitHub Actions is enabled for the repository.
+4. A host opens the dashboard and enables automation for the relevant challenge. Existing challenges remain disabled until explicitly enabled.
+
+The workflow `.github/workflows/leetcode-sync.yml` runs every 10 minutes and can also be started manually from the Actions tab. It runs a one-shot Node.js worker; it does not depend on the Render web process staying awake.
+
+### Participant setup
+
+1. Join the challenge and wait for the host to enable automation.
+2. Open the LeetCode automation panel and enter the LeetCode username.
+3. Explicitly consent to periodic checks, then start verification.
+4. Add the generated `UNANIMOUS-...` code to the public LeetCode profile's About Me field.
+5. Confirm verification in the dashboard. The code is cleared from the enrollment record after successful verification; it can then be removed from the public profile.
+6. Use Pause, Resume, Disconnect, or Sync now as needed. Re-verification after disconnect starts a new enrollment window and does not backfill old submissions.
+
+### Sync and scoring behavior
+
+- The worker reads LeetCode's recent Accepted-submission list (maximum 20 items exposed by the current endpoint), then fetches canonical problem difficulty.
+- Imported submissions enter the existing Pending host review queue. Only a host approval awards points.
+- Server scoring is fixed: Easy = 10, Medium = 25, Hard = 50. Client-provided difficulty and host-provided point values are ignored.
+- Manual submissions also resolve difficulty server-side. If LeetCode cannot be reached, they remain Pending with unverified difficulty and cannot be approved until the worker resolves the difficulty.
+- Duplicate submission IDs are unique per challenge. A participant/problem can have only one Pending or Approved solve per challenge; rejected solves can be resubmitted.
+- Paused or disconnected enrollments are not imported. The same LeetCode solve may count once in each separate challenge.
+- Dates and daily limits use Asia/Kolkata (IST) calendar boundaries.
+- The worker records checkpoints and warns when the entire 20-item recent window is newer than the checkpoint, indicating possible missed history.
+- Requests are sequential and low-volume, with timeouts, exponential backoff, and a worker-invocation circuit breaker for HTTP 403/429 responses. This integration uses LeetCode's unofficial public GraphQL endpoint; availability, response shape, and access policy can change without notice. It does not bypass access controls.
+
+### Local worker
+
+From `server/`, with a persistent `MONGODB_URI` configured:
+
+```bash
+npm run worker:sync
+```
+
+The worker performs one pass and exits. The GitHub Actions schedule is the recommended production scheduler for the current Render Free deployment.

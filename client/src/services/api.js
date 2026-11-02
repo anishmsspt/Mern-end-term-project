@@ -182,3 +182,26 @@ export async function getChallengeLeaderboard(challengeId, timeframe, token) {
     cache: 'no-store',
   });
 }
+
+/* ==================== LeetCode Automation Services ==================== */
+export async function getAutomationStatus(challengeId, token) {
+  return request(`/api/automation/${challengeId}/status`, { method: 'GET', token });
+}
+export async function startAutomationVerification(challengeId, username, token) {
+  return request(`/api/automation/${challengeId}/verification/start`, { method: 'POST', token, body: JSON.stringify({ username, consent: true }) });
+}
+export async function confirmAutomationVerification(challengeId, token) {
+  return request(`/api/automation/${challengeId}/verification/confirm`, { method: 'POST', token, body: JSON.stringify({}) });
+}
+export async function updateAutomationEnrollment(challengeId, action, token) {
+  return request(`/api/automation/${challengeId}/${action}`, { method: 'POST', token, body: JSON.stringify({}) });
+}
+export async function triggerAutomationSync(challengeId, token) {
+  return request(`/api/automation/${challengeId}/sync`, { method: 'POST', token, body: JSON.stringify({}) });
+}
+export async function setChallengeAutomation(challengeId, enabled, token) {
+  return request(`/api/automation/${challengeId}/host-settings`, { method: 'PUT', token, body: JSON.stringify({ enabled }) });
+}
+export async function getAutomationEnrollments(challengeId, token) {
+  return request(`/api/automation/${challengeId}/enrollments`, { method: 'GET', token });
+}

@@ -56,16 +56,16 @@ async function runE2E() {
     name: 'Primary Host',
   };
 
-  // Bootstrap host via db or login default
+  // Authenticate using explicitly configured host credentials
   let hostLogin = await makeRequest('POST', '/api/auth/login', {
-    email: 'host@unanimous.dev',
-    password: 'HostAdmin2026!',
+    email: process.env.BOOTSTRAP_HOST_EMAIL,
+    password: process.env.BOOTSTRAP_HOST_PASSWORD,
   });
 
   let hostToken = hostLogin.data?.token;
 
   if (!hostToken) {
-    console.log('Bootstrap host not found. Testing host login with default credentials.');
+    console.log('Configured host login failed. Check BOOTSTRAP_HOST_EMAIL and BOOTSTRAP_HOST_PASSWORD.');
   } else {
     console.log('2. Host Login verified:', hostLogin.status, 'Role:', hostLogin.data.user.role);
   }
