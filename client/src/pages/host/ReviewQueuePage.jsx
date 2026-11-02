@@ -77,25 +77,16 @@ export default function ReviewQueuePage() {
   }, [token, selectedStatus, selectedChallengeId, page]);
 
   const handleOpenApprove = (sub) => {
-    setActiveDialog({
-      submissionId: sub._id,
-      problemTitle: sub.problemTitle,
-      participantName: sub.participant?.name || 'Participant',
-      source: sub.source,
-      difficulty: sub.difficulty || '',
-      mode: 'approve',
-      reviewNotes: 'Verified solution manually by host.',
-    });
-  };
-    setActiveDialog({
-      submissionId: sub._id,
-      problemTitle: sub.problemTitle,
-      participantName: sub.participant?.name || 'Participant',
-      mode: 'approve',
-      pointsAwarded: defaultPts,
-      reviewNotes: 'Verified solution on LeetCode.',
-    });
-  };
+  setActiveDialog({
+    submissionId: sub._id,
+    problemTitle: sub.problemTitle,
+    participantName: sub.participant?.name || 'Participant',
+    source: sub.source,
+    difficulty: sub.difficulty || '',
+    mode: 'approve',
+    reviewNotes: 'Verified solution manually by host.',
+  });
+};
 
   const handleOpenReject = (sub) => {
     setActiveDialog({
