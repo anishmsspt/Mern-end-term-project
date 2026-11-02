@@ -77,11 +77,16 @@ export default function ReviewQueuePage() {
   }, [token, selectedStatus, selectedChallengeId, page]);
 
   const handleOpenApprove = (sub) => {
-    let defaultPts = 3;
-    if (sub.difficulty === 'Easy') defaultPts = 1;
-    if (sub.difficulty === 'Medium') defaultPts = 3;
-    if (sub.difficulty === 'Hard') defaultPts = 5;
-
+    setActiveDialog({
+      submissionId: sub._id,
+      problemTitle: sub.problemTitle,
+      participantName: sub.participant?.name || 'Participant',
+      source: sub.source,
+      difficulty: sub.difficulty || '',
+      mode: 'approve',
+      reviewNotes: 'Verified solution manually by host.',
+    });
+  };
     setActiveDialog({
       submissionId: sub._id,
       problemTitle: sub.problemTitle,
@@ -320,7 +325,12 @@ export default function ReviewQueuePage() {
                     <>
                       <button
                         onClick={() => handleOpenApprove(sub)}
-                        disabled={isProcessing || !sub.difficultyVerified || !['Easy', 'Medium', 'Hard'].includes(sub.difficulty)}
+                        disabled={
+                                    isProcessing ||
+                                    (sub.source === 'automated' &&
+                                      (!sub.difficultyVerified ||
+                                        !['Easy', 'Medium', 'Hard'].includes(sub.difficulty)))
+                                  }
                         title={(!sub.difficultyVerified || !['Easy', 'Medium', 'Hard'].includes(sub.difficulty)) ? 'Waiting for verified LeetCode difficulty' : 'Approve with standard difficulty-based points'}
                         className="lc-btn-success text-xs px-4 py-2 w-full md:w-auto"
                       >
@@ -384,7 +394,7 @@ export default function ReviewQueuePage() {
 
       {/* Review Confirmation Sheet / Dialog */}
       {activeDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-950/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink-950/80 backdrop-blur-sm">
           <div className="lc-card w-full max-w-md p-6 sm:p-8 space-y-5 border border-cream-100/15 shadow-frame bg-ink-900">
             <div className="flex items-start justify-between gap-3 border-b border-cream-100/10 pb-4">
               <div>
