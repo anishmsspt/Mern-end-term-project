@@ -533,22 +533,8 @@ const reviewSubmission = async (req, res, next) => {
         });
       }
 
-      // Persist immutable ScoreTransaction audit record
-      await ScoreTransaction.findOneAndUpdate(
-        { submission: updatedSubmission._id },
-        {
-          $setOnInsert: {
-            participant: updatedSubmission.participant._id,
-            challenge: updatedSubmission.challenge._id,
-            submission: updatedSubmission._id,
-            points: pointsAwarded,
-            awardedBy: req.user._id,
-            reason: `Approved solve: ${updatedSubmission.problemTitle}`,
-            awardedAt: new Date(),
-          },
-        },
-        { upsert: true, new: true }
-      );
+      // NOTE: A rejection awards no points, so no ScoreTransaction is written.
+      // (Previously a bogus "Approved solve" transaction was recorded here.)
 
       return res.status(200).json({
         success: true,

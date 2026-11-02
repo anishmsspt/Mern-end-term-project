@@ -1,7 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getMyChallenges, getChallengeLeaderboard } from '../../services/api';
+import {
+  getMyChallenges,
+  getChallengeLeaderboard,
+  LEADERBOARD_CHANGED_EVENT,
+  LEADERBOARD_CHANGED_STORAGE_KEY,
+} from '../../services/api';
 import { Trophy, RefreshCw, Users, ExternalLink } from 'lucide-react';
+
+// Light background polling so host approvals made in another tab/device show up
+// without a manual page refresh (no WebSockets / extra dependencies required).
+const AUTO_REFRESH_MS = 30000;
+
+const ROMAN = ['', 'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
+const toRoman = (n) => ROMAN[n] || String(n);
 
 export default function LeaderboardPage() {
   const { token, user } = useAuth();
@@ -9,81 +21,115 @@ export default function LeaderboardPage() {
   const [selectedChallengeId, setSelectedChallengeId] = useState('');
   const [timeframe, setTimeframe] = useState('overall');
   const [leaderboardData, setLeaderboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [challengesLoading, setChallengesLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadChallenges() {
+      setChallengesLoading(true);
       try {
         const res = await getMyChallenges(token);
         const challengeList = res.challenges || res.data || [];
-        if (res.success && challengeList.length > 0) {
-          setChallenges(challengeList);
-          setSelectedChallengeId(challengeList[0]._id);
-        } else {
-          setLoading(false);
+        if (!isMounted) return;
+        setChallenges(challengeList);
+        if (challengeList.length > 0) {
+          setSelectedChallengeId((current) => current || challengeList[0]._id);
         }
       } catch (err) {
-        setError(err.message || 'Failed to load challenges');
-        setLoading(false);
+        if (isMounted) setError(err.message || 'Failed to load challenges');
+      } finally {
+        if (isMounted) setChallengesLoading(false);
       }
     }
     loadChallenges();
+    return () => {
+      isMounted = false;
+    };
   }, [token]);
 
-  useEffect(() => {
-    if (!selectedChallengeId) return;
-
-    let isMounted = true;
-    async function fetchLeaderboard() {
-      setLoading(true);
+  /**
+   * Fetch standings for the selected challenge.
+   * `silent` refreshes (background / event-driven) do not blank the table.
+   * Only the most recent request may update state, so switching challenges
+   * quickly can never show another challenge's data.
+   */
+  const fetchLeaderboard = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!selectedChallengeId) return;
+      const requestId = ++requestIdRef.current;
+      if (!silent) setLoading(true);
       setError(null);
       try {
         const tf = timeframe === 'weekly' ? 'weekly' : '';
         const res = await getChallengeLeaderboard(selectedChallengeId, tf, token);
-        if (isMounted) {
-          if (res.success) {
-            setLeaderboardData(res.data);
-          } else {
-            setError(res.message || 'Failed to fetch standings');
-          }
+        if (requestId !== requestIdRef.current) return;
+        if (res && res.success) {
+          // API contract: { success, challenge, totalParticipants, leaderboard, standings }
+          const rows = res.standings || res.leaderboard || [];
+          setLeaderboardData({
+            challenge: res.challenge || null,
+            totalParticipants: res.totalParticipants ?? rows.length,
+            standings: rows,
+          });
+        } else {
+          setError((res && res.message) || 'Failed to fetch standings');
         }
       } catch (err) {
-        if (isMounted) {
+        if (requestId === requestIdRef.current) {
           setError(err.message || 'Error loading leaderboard data');
         }
       } finally {
-        if (isMounted) setLoading(false);
+        if (requestId === requestIdRef.current) setLoading(false);
       }
-    }
+    },
+    [selectedChallengeId, timeframe, token]
+  );
 
+  // Load on challenge / timeframe change (clear stale data from the previous challenge)
+  useEffect(() => {
+    setLeaderboardData(null);
     fetchLeaderboard();
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedChallengeId, timeframe, token]);
+  }, [fetchLeaderboard]);
 
-  const handleRefresh = async () => {
-    if (!selectedChallengeId) return;
-    setLoading(true);
-    try {
-      const tf = timeframe === 'weekly' ? 'weekly' : '';
-      const res = await getChallengeLeaderboard(selectedChallengeId, tf, token);
-      if (res.success) {
-        setLeaderboardData(res.data);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Automatic refresh: join / submit / approve / reject events, other tabs, focus, polling
+  useEffect(() => {
+    if (!selectedChallengeId) return undefined;
+
+    const refreshSilently = () => fetchLeaderboard({ silent: true });
+    const onStorage = (e) => {
+      if (e.key === LEADERBOARD_CHANGED_STORAGE_KEY) refreshSilently();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refreshSilently();
+    };
+
+    window.addEventListener(LEADERBOARD_CHANGED_EVENT, refreshSilently);
+    window.addEventListener('storage', onStorage);
+    document.addEventListener('visibilitychange', onVisible);
+    const intervalId = setInterval(onVisible, AUTO_REFRESH_MS);
+
+    return () => {
+      window.removeEventListener(LEADERBOARD_CHANGED_EVENT, refreshSilently);
+      window.removeEventListener('storage', onStorage);
+      document.removeEventListener('visibilitychange', onVisible);
+      clearInterval(intervalId);
+    };
+  }, [selectedChallengeId, fetchLeaderboard]);
+
+  const handleRefresh = () => fetchLeaderboard();
 
   const standings = leaderboardData?.standings || [];
-  const topFirst = standings.find((s) => s.rank === 1);
-  const topSecond = standings.find((s) => s.rank === 2);
-  const topThird = standings.find((s) => s.rank === 3);
-  const hasPodium = standings.length > 0;
+  // Podium shows the first three standings entries that actually earned points
+  // (ties keep their shared rank label); everyone still appears in the table below.
+  const podiumEntries = standings.filter((s) => (s.totalPoints || 0) > 0).slice(0, 3);
+  const topFirst = podiumEntries[0];
+  const topSecond = podiumEntries[1];
+  const topThird = podiumEntries[2];
+  const hasPodium = podiumEntries.length > 0;
+  const isInitialLoading = challengesLoading || (loading && !leaderboardData);
 
   return (
     <div className="lc-page space-y-6">
@@ -140,7 +186,7 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      {challenges.length === 0 && !loading && (
+      {challenges.length === 0 && !challengesLoading && (
         <div className="lc-card p-12 text-center">
           <Users className="w-8 h-8 text-ink-500 mx-auto mb-3" />
           <h3 className="font-serif text-2xl text-cream-50">No challenge found</h3>
@@ -189,12 +235,19 @@ export default function LeaderboardPage() {
         </div>
       )}
 
+      {isInitialLoading && !error && (
+        <div className="lc-card p-12 text-center" role="status" aria-live="polite">
+          <RefreshCw className="w-6 h-6 text-peach-300 mx-auto mb-3 animate-spin" />
+          <p className="text-xs text-ink-400">Loading standings…</p>
+        </div>
+      )}
+
       {/* Top 3 Podium (Visual presentation of top 3 in standings) */}
       {hasPodium && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end pt-2">
           {/* Rank 2 */}
           <div className="order-2 md:order-1 lc-card p-5 text-center space-y-1">
-            <div className="font-serif italic text-3xl text-ink-400">ii</div>
+            <div className="font-serif italic text-3xl text-ink-400">{topSecond ? toRoman(topSecond.rank) : 'ii'}</div>
             <div className="font-serif text-xl text-cream-50 truncate">
               {topSecond?.name || '—'}
             </div>
@@ -205,7 +258,7 @@ export default function LeaderboardPage() {
 
           {/* Rank 1 (Center, taller, highlighted) */}
           <div className="order-1 md:order-2 lc-card p-6 text-center space-y-1.5 border-peach-300/40 shadow-card-lift relative">
-            <div className="font-serif italic text-4xl text-peach-300">i</div>
+            <div className="font-serif italic text-4xl text-peach-300">{topFirst ? toRoman(topFirst.rank) : 'i'}</div>
             <div className="font-serif text-2xl text-cream-50 font-normal truncate">
               {topFirst?.name || '—'}
             </div>
@@ -219,7 +272,7 @@ export default function LeaderboardPage() {
 
           {/* Rank 3 */}
           <div className="order-3 lc-card p-5 text-center space-y-1">
-            <div className="font-serif italic text-3xl text-ink-400">iii</div>
+            <div className="font-serif italic text-3xl text-ink-400">{topThird ? toRoman(topThird.rank) : 'iii'}</div>
             <div className="font-serif text-xl text-cream-50 truncate">
               {topThird?.name || '—'}
             </div>
@@ -231,7 +284,7 @@ export default function LeaderboardPage() {
       )}
 
       {/* Complete Leaderboard Table */}
-      {leaderboardData && (
+      {leaderboardData && !isInitialLoading && (
         <div className="lc-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
@@ -249,15 +302,15 @@ export default function LeaderboardPage() {
                 {standings.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="text-center py-14 font-serif italic text-lg text-ink-400">
-                      No approved solutions recorded yet for this timeframe.
+                      No participants have joined this challenge yet.
                     </td>
                   </tr>
                 ) : (
                   standings.map((entry) => {
-                    const isCurrentUser = user && user._id === entry.userId;
+                    const isCurrentUser = !!user && String(user._id || user.id) === String(entry.participantId);
                     return (
                       <tr
-                        key={entry.userId}
+                        key={entry.participantId}
                         className={`transition-colors ${
                           isCurrentUser
                             ? 'bg-gradient-to-r from-ember-500/15 via-ember-500/5 to-transparent'
@@ -288,14 +341,14 @@ export default function LeaderboardPage() {
                               </span>
                             )}
                           </div>
-                          {entry.leetCodeUsername && (
+                          {entry.leetcodeUsername && (
                             <a
-                              href={`https://leetcode.com/u/${entry.leetCodeUsername}`}
+                              href={`https://leetcode.com/u/${entry.leetcodeUsername}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 text-[11px] text-ink-500 hover:text-peach-300 font-mono transition-colors"
                             >
-                              <span>@{entry.leetCodeUsername}</span>
+                              <span>@{entry.leetcodeUsername}</span>
                               <ExternalLink className="w-3 h-3" />
                             </a>
                           )}
