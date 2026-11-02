@@ -5,6 +5,7 @@ import { getMyChallenges, getMySubmissions, createChallenge } from '../../servic
 import JoinChallengeCard from '../../components/challenges/JoinChallengeCard';
 import SubmissionModal from '../../components/submissions/SubmissionModal';
 import SubmissionsList from '../../components/submissions/SubmissionsList';
+import AutomationPanel from '../../components/challenges/AutomationPanel';
 import { ExternalLink, PlusCircle, Loader2, X } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -20,8 +21,8 @@ export default function DashboardPage() {
     title: '',
     description: '',
     joinCode: '',
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    startDate: new Date(Date.now() + 330 * 60 * 1000).toISOString().slice(0, 10),
+    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000 + 330 * 60 * 1000).toISOString().slice(0, 10),
   });
   const [createChallengeLoading, setCreateChallengeLoading] = useState(false);
   const [createChallengeError, setCreateChallengeError] = useState(null);
@@ -70,8 +71,8 @@ export default function DashboardPage() {
           title: '',
           description: '',
           joinCode: '',
-          startDate: new Date().toISOString().split('T')[0],
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          startDate: new Date(Date.now() + 330 * 60 * 1000).toISOString().slice(0, 10),
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000 + 330 * 60 * 1000).toISOString().slice(0, 10),
         });
         loadDashboardData();
       } else {
@@ -168,6 +169,8 @@ export default function DashboardPage() {
             activeChallenge={activeChallenge}
             onChallengeJoined={handleChallengeJoined}
           />
+
+          {isParticipant && activeChallenge && <AutomationPanel challenge={activeChallenge} />}
 
           {/* Participant Stat Numerals (Serif Display) */}
           {isParticipant && (
@@ -271,6 +274,7 @@ export default function DashboardPage() {
                             {c.joinCode}
                           </span>
                         </div>
+                        <AutomationPanel challenge={c} isHost />
                       </div>
                     ))}
                   </div>

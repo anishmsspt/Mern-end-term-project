@@ -36,17 +36,11 @@ async function bootstrapHost() {
     const leetcodeHandle = (process.env.BOOTSTRAP_HOST_LEETCODE || '').trim();
 
     if (!hostEmail || !hostPassword) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error(
-          'FATAL: BOOTSTRAP_HOST_EMAIL and BOOTSTRAP_HOST_PASSWORD environment variables are strictly required in production.'
-        );
-      }
-      console.warn('⚠️  [SECURITY WARNING] BOOTSTRAP_HOST_EMAIL or BOOTSTRAP_HOST_PASSWORD not set in environment.');
-      console.warn('⚠️  Falling back to development-only local credentials. DO NOT USE IN PRODUCTION.');
+      throw new Error('BOOTSTRAP_HOST_EMAIL and BOOTSTRAP_HOST_PASSWORD must be configured before creating a host. No default credentials are provided.');
     }
 
-    const finalEmail = hostEmail || 'host@unanimous.dev';
-    const finalPassword = hostPassword || 'HostAdmin2026!';
+    const finalEmail = hostEmail;
+    const finalPassword = hostPassword;
 
     if (finalPassword.length < 8) {
       throw new Error('Host password must be at least 8 characters in length.');
@@ -88,11 +82,11 @@ async function bootstrapHost() {
           maxSubmissionsPerDay: 5,
           allowMultipleSubmissionsPerDay: true,
           requireEvidence: false,
-          pointsPolicy: 'manual',
+          pointsPolicy: 'difficulty_preset',
           defaultPoints: {
-            easy: 1,
-            medium: 3,
-            hard: 5,
+            easy: 10,
+            medium: 25,
+            hard: 50,
           },
         },
       });

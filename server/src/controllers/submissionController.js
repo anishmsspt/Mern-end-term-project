@@ -4,6 +4,10 @@ const ChallengeMembership = require('../models/ChallengeMembership');
 const ScoreTransaction = require('../models/ScoreTransaction');
 const { parseLeetCodeUrl } = require('../utils/leetcodeValidator');
 const { toLocalDateString, parseDateBoundary } = require('../utils/dateUtils');
+const { getProblem } = require('../services/leetcodeClient');
+const ProblemCache = require('../models/ProblemCache');
+const { pointsForDifficulty } = require('../utils/scoring');
+const { parseIstDateBoundary, istDateKey } = require('../utils/istDate');
 
 /**
  * Submit a solved LeetCode problem
@@ -15,7 +19,6 @@ const createSubmission = async (req, res, next) => {
       challengeId,
       problemTitle,
       problemUrl,
-      difficulty,
       completionDate,
       notes,
       evidenceUrl,
@@ -99,6 +102,25 @@ const createSubmission = async (req, res, next) => {
 
     const { slug, canonicalUrl } = urlValidation;
 
+    // Difficulty/title are resolved server-side; client-provided values are never trusted.
+    let authoritativeProblem = await ProblemCache.findOne({ slug });
+    if (!authoritativeProblem || Date.now() - authoritativeProblem.fetchedAt.getTime() > 30 * 86400000) {
+      try {
+        const details = await getProblem(slug);
+        if (details && ['Easy', 'Medium', 'Hard'].includes(details.difficulty)) {
+          authoritativeProblem = await ProblemCache.findOneAndUpdate(
+            { slug }, { $set: { title: details.title, difficulty: details.difficulty, fetchedAt: new Date() } },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          );
+        }
+      } catch (lookupError) {
+        console.warn(`[LeetCode] Difficulty lookup failed for ${slug}: ${lookupError.message}`);
+      }
+    }
+    const verifiedDifficulty = ['Easy', 'Medium', 'Hard'].includes(authoritativeProblem?.difficulty)
+      ? authoritativeProblem.difficulty : 'Unknown';
+    const verifiedTitle = authoritativeProblem?.title || problemTitle.trim();
+
     // Validate completion date format
     const parsedDate = parseDateBoundary(completionDate, 'default');
     if (!parsedDate || isNaN(parsedDate.getTime())) {
@@ -149,10 +171,8 @@ const createSubmission = async (req, res, next) => {
 
     // Check daily submission limit rule if configured
     if (challenge.rules?.maxSubmissionsPerDay) {
-      const dayStart = new Date(parsedDate);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(parsedDate);
-      dayEnd.setHours(23, 59, 59, 999);
+      const dayStart = parseIstDateBoundary(istDateKey(parsedDate), 'start');
+      const dayEnd = parseIstDateBoundary(istDateKey(parsedDate), 'end');
 
       const daySubmissionsCount = await Submission.countDocuments({
         participant: req.user._id,
@@ -170,18 +190,25 @@ const createSubmission = async (req, res, next) => {
     }
 
     // Save submission with guaranteed initial status 'Pending'
-    const submission = await Submission.create({
+    let submission;
+    try { submission = await Submission.create({
       participant: req.user._id,
       challenge: challenge._id,
-      problemTitle: problemTitle.trim(),
+      problemTitle: verifiedTitle,
       problemUrl: canonicalUrl,
       problemSlug: slug,
-      difficulty: difficulty || 'Unknown',
+      difficulty: verifiedDifficulty,
+      difficultyVerified: verifiedDifficulty !== 'Unknown',
+      activeDuplicateKey: `${req.user._id}:${challenge._id}:${slug}`,
+      source: 'manual',
       completionDate: parsedDate,
       notes: notes ? String(notes).trim() : '',
       evidenceUrl: evidenceUrl ? String(evidenceUrl).trim() : '',
       status: 'Pending',
-    });
+    }); } catch (createError) {
+      if (createError.code === 11000) return res.status(409).json({ success: false, message: 'This problem already has a pending or approved submission in this challenge.' });
+      throw createError;
+    }
 
     return res.status(201).json({
       success: true,
@@ -330,11 +357,9 @@ const getReviewQueue = async (req, res, next) => {
     }
 
     if (completionDate) {
-      const dayStart = new Date(completionDate);
+      const dayStart = parseIstDateBoundary(completionDate, 'start');
       if (!isNaN(dayStart.getTime())) {
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = new Date(completionDate);
-        dayEnd.setHours(23, 59, 59, 999);
+        const dayEnd = parseIstDateBoundary(completionDate, 'end');
         query.completionDate = { $gte: dayStart, $lte: dayEnd };
       }
     }
@@ -375,7 +400,7 @@ const getReviewQueue = async (req, res, next) => {
 const reviewSubmission = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { action, decision, pointsAwarded, reviewNotes } = req.body;
+    const { action, decision, reviewNotes } = req.body;
 
     // Role check: Only Host or Admin
     if (req.user.role !== 'host' && req.user.role !== 'admin') {
@@ -425,29 +450,11 @@ const reviewSubmission = async (req, res, next) => {
       });
     }
 
-    const MAX_POINTS = 100;
-
     if (normalizedDecision === 'approve') {
-      // Validate pointsAwarded: strictly positive integer within bounds
-      if (
-        pointsAwarded === undefined ||
-        pointsAwarded === null ||
-        typeof pointsAwarded !== 'number' ||
-        !Number.isInteger(pointsAwarded) ||
-        pointsAwarded <= 0
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: 'Approval requires a positive integer point value (pointsAwarded > 0). Fractional, zero, or negative points are invalid.',
-        });
+      if (!submission.difficultyVerified || !['Easy', 'Medium', 'Hard'].includes(submission.difficulty)) {
+        return res.status(409).json({ success: false, message: 'Cannot approve until the problem difficulty has been verified by LeetCode.' });
       }
-
-      if (pointsAwarded > MAX_POINTS) {
-        return res.status(400).json({
-          success: false,
-          message: `Approval points cannot exceed the maximum limit of ${MAX_POINTS} points.`,
-        });
-      }
+      const serverPoints = pointsForDifficulty(submission.difficulty);
 
       // Atomic conditional update ensuring concurrent requests cannot double-approve
       const updatedSubmission = await Submission.findOneAndUpdate(
@@ -455,7 +462,7 @@ const reviewSubmission = async (req, res, next) => {
         {
           $set: {
             status: 'Approved',
-            pointsAwarded,
+            pointsAwarded: serverPoints,
             reviewer: req.user._id,
             reviewedAt: new Date(),
             reviewNotes: reviewNotes ? String(reviewNotes).trim() : 'Approved by Host',
@@ -482,9 +489,9 @@ const reviewSubmission = async (req, res, next) => {
             participant: updatedSubmission.participant._id,
             challenge: updatedSubmission.challenge._id,
             submission: updatedSubmission._id,
-            points: pointsAwarded,
+            points: serverPoints,
             awardedBy: req.user._id,
-            reason: `Approved solve: ${updatedSubmission.problemTitle}`,
+            reason: `Approved ${updatedSubmission.difficulty} solve: ${updatedSubmission.problemTitle}`,
             awardedAt: new Date(),
           },
         },
@@ -493,7 +500,7 @@ const reviewSubmission = async (req, res, next) => {
 
       return res.status(200).json({
         success: true,
-        message: `Submission approved successfully. ${pointsAwarded} points allocated.`,
+        message: `Submission approved successfully. ${serverPoints} points allocated.`,
         submission: updatedSubmission,
       });
     }
@@ -520,6 +527,7 @@ const reviewSubmission = async (req, res, next) => {
             reviewNotes: reason.trim(),
             rejectionReason: reason.trim(),
           },
+          $unset: { activeDuplicateKey: 1 },
         },
         { new: true }
       )

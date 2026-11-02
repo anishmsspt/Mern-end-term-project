@@ -52,13 +52,14 @@ const connectDB = async () => {
       const crypto = require('crypto');
       const path = require('path');
       const fs = require('fs');
-      const instancePath = path.join('D:\\mongodb-tmp', `inst-${crypto.randomBytes(4).toString('hex')}`);
+      const tempRoot = process.env.MONGOMS_TMP_DIR || path.join(require('os').tmpdir(), 'unanimous-mongodb');
+      const instancePath = path.join(tempRoot, `inst-${crypto.randomBytes(4).toString('hex')}`);
       if (!fs.existsSync(instancePath)) {
         fs.mkdirSync(instancePath, { recursive: true });
       }
       mongoMemoryServer = await MongoMemoryServer.create({
         binary: {
-          downloadDir: 'D:\\mongodb-binaries',
+          downloadDir: process.env.MONGOMS_DOWNLOAD_DIR || path.join(require('os').homedir(), '.cache', 'mongodb-binaries'),
         },
         instance: {
           dbPath: instancePath,

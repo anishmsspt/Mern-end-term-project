@@ -1,0 +1,13 @@
+const express = require('express');
+const router = express.Router();
+const { requireAuth, requireHost } = require('../middleware/auth');
+const controller = require('../controllers/automationController');
+router.use(requireAuth);
+router.get('/:challengeId/status', controller.getStatus);
+router.post('/:challengeId/verification/start', controller.startVerification);
+router.post('/:challengeId/verification/confirm', controller.confirmVerification);
+router.post('/:challengeId/sync', controller.manualSync);
+router.post('/:challengeId/:action', controller.updateStatus);
+router.put('/:challengeId/host-settings', requireHost, controller.toggleChallenge);
+router.get('/:challengeId/enrollments', requireHost, controller.listEnrollments);
+module.exports = router;

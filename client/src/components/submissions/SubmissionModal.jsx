@@ -6,21 +6,11 @@ import { X, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 export default function SubmissionModal({ challenge, isOpen, onClose, onSubmissionCreated }) {
   const { token } = useAuth();
 
-  const formatLocalDate = (dateObj) => {
-    const d = new Date(dateObj);
-    if (isNaN(d.getTime())) return '';
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const todayStr = formatLocalDate(new Date());
+  const todayStr = new Date(Date.now() + 330 * 60 * 1000).toISOString().slice(0, 10);
 
   const [formData, setFormData] = useState({
     problemTitle: '',
     problemUrl: '',
-    difficulty: 'Easy',
     completionDate: todayStr,
     notes: '',
     evidenceUrl: '',
@@ -59,7 +49,6 @@ export default function SubmissionModal({ challenge, isOpen, onClose, onSubmissi
           challengeId: challenge._id,
           problemTitle: formData.problemTitle.trim(),
           problemUrl: formData.problemUrl.trim(),
-          difficulty: formData.difficulty,
           completionDate: formData.completionDate,
           notes: formData.notes.trim(),
           evidenceUrl: formData.evidenceUrl.trim(),
@@ -139,29 +128,12 @@ export default function SubmissionModal({ challenge, isOpen, onClose, onSubmissi
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="lc-label">Difficulty *</label>
-              <select
-                name="difficulty"
-                value={formData.difficulty}
-                onChange={handleChange}
-                className="lc-input"
-              >
-                <option value="Easy">Easy</option>
-                <option value="Medium">Medium</option>
-                <option value="Hard">Hard</option>
-              </select>
+              <label className="lc-label">Difficulty</label>
+              <div className="lc-input text-xs text-ink-400">Verified by LeetCode server-side</div>
             </div>
-
             <div>
               <label className="lc-label">Date solved *</label>
-              <input
-                type="date"
-                name="completionDate"
-                value={formData.completionDate}
-                onChange={handleChange}
-                required
-                className="lc-input font-mono text-xs"
-              />
+              <input type="date" name="completionDate" value={formData.completionDate} onChange={handleChange} required className="lc-input font-mono text-xs" />
             </div>
           </div>
 

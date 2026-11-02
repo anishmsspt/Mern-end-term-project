@@ -112,17 +112,6 @@ export default function ReviewQueuePage() {
 
     const { submissionId, mode, pointsAwarded, reviewNotes } = activeDialog;
 
-    if (mode === 'approve') {
-      const pts = parseInt(pointsAwarded, 10);
-      if (isNaN(pts) || pts <= 0) {
-        setErrorMsg('Please specify a positive integer point value (points > 0).');
-        return;
-      }
-      if (pts > 100) {
-        setErrorMsg('Points cannot exceed 100 per single problem.');
-        return;
-      }
-    }
 
     if (mode === 'reject' && (!reviewNotes || !reviewNotes.trim())) {
       setErrorMsg('A rejection reason is mandatory so participants understand why.');
@@ -135,7 +124,6 @@ export default function ReviewQueuePage() {
         submissionId,
         {
           action: mode === 'approve' ? 'approve' : 'reject',
-          pointsAwarded: mode === 'approve' ? parseInt(pointsAwarded, 10) : 0,
           reviewNotes: reviewNotes.trim(),
         },
         token
@@ -265,6 +253,8 @@ export default function ReviewQueuePage() {
                     <span className="lc-badge lc-badge-role text-[9px]">
                       {sub.challenge?.title || 'Challenge'}
                     </span>
+                    <span className="lc-badge text-[9px]">{sub.source === 'automated' ? 'Auto-imported' : 'Manual'}</span>
+                    {sub.difficultyVerified === false && <span className="text-[10px] text-amber-300">Difficulty awaiting verification</span>}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-ink-400">
@@ -330,7 +320,8 @@ export default function ReviewQueuePage() {
                     <>
                       <button
                         onClick={() => handleOpenApprove(sub)}
-                        disabled={isProcessing}
+                        disabled={isProcessing || !sub.difficultyVerified || !['Easy', 'Medium', 'Hard'].includes(sub.difficulty)}
+                        title={(!sub.difficultyVerified || !['Easy', 'Medium', 'Hard'].includes(sub.difficulty)) ? 'Waiting for verified LeetCode difficulty' : 'Approve with standard difficulty-based points'}
                         className="lc-btn-success text-xs px-4 py-2 w-full md:w-auto"
                       >
                         Approve
@@ -417,22 +408,8 @@ export default function ReviewQueuePage() {
 
             <form onSubmit={handleExecuteReview} className="space-y-4">
               {activeDialog.mode === 'approve' && (
-                <div>
-                  <label className="lc-label">Points to award (1–100) *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={activeDialog.pointsAwarded}
-                    onChange={(e) =>
-                      setActiveDialog({ ...activeDialog, pointsAwarded: e.target.value })
-                    }
-                    required
-                    className="lc-input font-mono text-base text-peach-300"
-                  />
-                  <p className="text-[11px] text-ink-500 mt-1">
-                    Standard guideline: 1 pt for Easy, 3 pts for Medium, 5 pts for Hard.
-                  </p>
+                <div className="rounded border border-cream-100/10 p-3 text-xs text-ink-300">
+                  Points are calculated and locked by the server: Easy 10 · Medium 25 · Hard 50.
                 </div>
               )}
 

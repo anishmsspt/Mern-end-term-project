@@ -7,6 +7,7 @@ const User = require('../src/models/User');
 const Challenge = require('../src/models/Challenge');
 const ChallengeMembership = require('../src/models/ChallengeMembership');
 const Submission = require('../src/models/Submission');
+const ProblemCache = require('../src/models/ProblemCache');
 const { generateToken } = require('../src/utils/token');
 
 describe('Phase 3: Challenge Membership & Daily Submissions Tests', () => {
@@ -34,6 +35,7 @@ describe('Phase 3: Challenge Membership & Daily Submissions Tests', () => {
     await Challenge.deleteMany({});
     await ChallengeMembership.deleteMany({});
     await Submission.deleteMany({});
+    await ProblemCache.deleteMany({});
 
     const hash = await User.hashPassword('Pass12345!');
 
@@ -80,6 +82,7 @@ describe('Phase 3: Challenge Membership & Daily Submissions Tests', () => {
         allowMultipleSubmissionsPerDay: true,
       },
     });
+    await ProblemCache.insertMany(['two-sum', 'valid-parentheses', 'climbing-stairs', 'merge-two-sorted-lists', 'problem-one', 'problem-two', 'problem-three', 'problem-four'].map((slug) => ({ slug, title: slug.replace(/-/g, ' '), difficulty: 'Easy' })));
   });
 
   describe('1. Challenge Membership Workflow (POST /api/challenges/join)', () => {

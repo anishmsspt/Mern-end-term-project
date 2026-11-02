@@ -7,6 +7,7 @@ const User = require('../src/models/User');
 const Challenge = require('../src/models/Challenge');
 const ChallengeMembership = require('../src/models/ChallengeMembership');
 const Submission = require('../src/models/Submission');
+const ProblemCache = require('../src/models/ProblemCache');
 const ScoreTransaction = require('../src/models/ScoreTransaction');
 const { generateToken } = require('../src/utils/token');
 const { rankEntries } = require('../src/controllers/leaderboardController');
@@ -226,17 +227,14 @@ describe('Priority 3: Authoritative Dynamic Leaderboard Tests', () => {
       .set('Authorization', `Bearer ${generateToken(user)}`)
       .send({ joinCode });
 
-  const submitViaApi = (user, challengeId, slug) =>
-    request(app)
+  const submitViaApi = async (user, challengeId, slug) => {
+    const difficulty = slug === 'dana-problem' ? 'Hard' : 'Easy';
+    await ProblemCache.findOneAndUpdate({ slug }, { $set: { title: `Problem ${slug}`, difficulty, fetchedAt: new Date() } }, { upsert: true, new: true });
+    return request(app)
       .post('/api/submissions')
       .set('Authorization', `Bearer ${generateToken(user)}`)
-      .send({
-        challengeId: String(challengeId),
-        problemTitle: `Problem ${slug}`,
-        problemUrl: `https://leetcode.com/problems/${slug}/`,
-        difficulty: 'Easy',
-        completionDate: new Date().toISOString(),
-      });
+      .send({ challengeId: String(challengeId), problemTitle: `Problem ${slug}`, problemUrl: `https://leetcode.com/problems/${slug}/`, completionDate: new Date().toISOString() });
+  };
 
   const reviewViaApi = (reviewer, submissionId, body) =>
     request(app)
@@ -374,7 +372,7 @@ describe('Priority 3: Authoritative Dynamic Leaderboard Tests', () => {
     test('5. One approved submission adds exactly its awarded points', async () => {
       const res = await getBoard(hostToken, challenge._id);
       const bob = res.body.leaderboard.find((e) => e.name === 'Bob RunnerUp');
-      assert.equal(bob.totalPoints, 20);
+      assert.equal(bob.totalPoints, 10);
       assert.equal(bob.solvedCount, 1);
     });
 
@@ -412,7 +410,7 @@ describe('Priority 3: Authoritative Dynamic Leaderboard Tests', () => {
       board = (await getBoard(hostToken, challenge._id)).body.leaderboard;
       assert.equal(board.find((e) => e.name === 'Dana Workflow').totalPoints, 0);
 
-      // Approve Dana with 30 points
+      // Approve Dana; server awards 50 points for verified Hard difficulty
       const approve = await reviewViaApi(host, danaSub.body.submission._id, {
         action: 'approve',
         pointsAwarded: 30,
@@ -429,15 +427,15 @@ describe('Priority 3: Authoritative Dynamic Leaderboard Tests', () => {
       board = (await getBoard(hostToken, challenge._id)).body.leaderboard;
       const dEntry = board.find((e) => e.name === 'Dana Workflow');
       const eEntry = board.find((e) => e.name === 'Erin Workflow');
-      assert.equal(dEntry.totalPoints, 30);
+      assert.equal(dEntry.totalPoints, 50);
       assert.equal(dEntry.solvedCount, 1);
       assert.equal(eEntry.totalPoints, 0);
       assert.equal(eEntry.solvedCount, 0);
 
-      // Dana (30) is now ahead of Bob (20) but behind Alice (40)
+      // Dana's verified Hard solve (50) ranks ahead of Alice (40) and Bob (20).
       const order = board.map((e) => e.name);
-      assert.ok(order.indexOf('Alice Top') < order.indexOf('Dana Workflow'));
-      assert.ok(order.indexOf('Dana Workflow') < order.indexOf('Bob RunnerUp'));
+      assert.ok(order.indexOf('Dana Workflow') < order.indexOf('Alice Top'));
+      assert.ok(order.indexOf('Alice Top') < order.indexOf('Bob RunnerUp'));
     });
 
     test('Rejection no longer writes a bogus "Approved solve" ScoreTransaction', async () => {
