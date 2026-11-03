@@ -172,6 +172,16 @@ export async function reviewSubmission(submissionId, reviewData, token) {
   return data;
 }
 
+/* ==================== Host Analytics Services ==================== */
+
+export async function getSubmissionAnalytics(challengeId, token) {
+  return request(`/api/submissions/analytics/${encodeURIComponent(challengeId)}`, {
+    method: 'GET',
+    token,
+    cache: 'no-store',
+  });
+}
+
 /* ==================== Leaderboard Services ==================== */
 
 export async function getChallengeLeaderboard(challengeId, timeframe, token) {

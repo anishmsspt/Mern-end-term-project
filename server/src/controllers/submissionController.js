@@ -1,4 +1,6 @@
+const mongoose = require('mongoose');
 const Submission = require('../models/Submission');
+const User = require('../models/User');
 const Challenge = require('../models/Challenge');
 const ChallengeMembership = require('../models/ChallengeMembership');
 const ScoreTransaction = require('../models/ScoreTransaction');
@@ -461,6 +463,13 @@ const getSubmissionAnalytics = async (req, res, next) => {
 
     const { challengeId } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(challengeId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid challenge id.',
+      });
+    }
+
     const challenge = await Challenge.findById(challengeId)
       .select('_id title host');
 
@@ -489,6 +498,8 @@ const getSubmissionAnalytics = async (req, res, next) => {
       },
       {
         $addFields: {
+          // Legacy records predate the `source` field and are manual.
+          source: { $ifNull: ['$source', 'manual'] },
           activityTime: {
             $cond: [
               {
@@ -593,6 +604,18 @@ const getSubmissionAnalytics = async (req, res, next) => {
                   },
                 },
 
+                approved: {
+                  $sum: { $cond: [{ $eq: ['$status', 'Approved'] }, 1, 0] },
+                },
+
+                pending: {
+                  $sum: { $cond: [{ $eq: ['$status', 'Pending'] }, 1, 0] },
+                },
+
+                rejected: {
+                  $sum: { $cond: [{ $eq: ['$status', 'Rejected'] }, 1, 0] },
+                },
+
                 firstSubmissionAt: {
                   $min: '$activityTime',
                 },
@@ -616,21 +639,17 @@ const getSubmissionAnalytics = async (req, res, next) => {
       lastSubmissionAt: null,
     };
 
-    // Resolve participant names and usernames.
-    const memberships = await ChallengeMembership.find({
-      challenge: challenge._id,
-    }).populate('user', 'name email leetcodeUsername');
+    // Resolve identities only for users who have submissions in THIS challenge,
+    // so no other challenge's participant data can leak into the response.
+    const participantIds = (result.participantActivity || []).map((item) => item._id);
 
-    const participantById = new Map();
+    const participantUsers = participantIds.length
+      ? await User.find({ _id: { $in: participantIds } }).select('name email leetcodeUsername')
+      : [];
 
-    memberships.forEach((membership) => {
-      if (membership.user) {
-        participantById.set(
-          membership.user._id.toString(),
-          membership.user
-        );
-      }
-    });
+    const participantById = new Map(
+      participantUsers.map((user) => [user._id.toString(), user])
+    );
 
     const participantActivity = (
       result.participantActivity || []
@@ -654,6 +673,9 @@ const getSubmissionAnalytics = async (req, res, next) => {
         total: item.total,
         manual: item.manual,
         automated: item.automated,
+        approved: item.approved,
+        pending: item.pending,
+        rejected: item.rejected,
         firstSubmissionAt: item.firstSubmissionAt,
         lastSubmissionAt: item.lastSubmissionAt,
       };
