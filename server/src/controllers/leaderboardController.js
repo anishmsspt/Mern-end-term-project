@@ -2,45 +2,13 @@ const mongoose = require('mongoose');
 const Challenge = require('../models/Challenge');
 const ChallengeMembership = require('../models/ChallengeMembership');
 const Submission = require('../models/Submission');
+const StreakAdjustment = require('../models/StreakAdjustment');
+const { calculateStreaks } = require('../utils/streaks');
+const { istDateKey } = require('../utils/istDate');
 
-// Convert a timestamp to a calendar-day key in Asia/Kolkata (UTC+05:30).
-const istDayKey = (value) => {
-  const date = new Date(value);
-  return new Date(date.getTime() + 330 * 60 * 1000).toISOString().slice(0, 10);
-};
-
-const dayKeyToUtcDay = (key) => {
-  const [year, month, day] = key.split('-').map(Number);
-  return Date.UTC(year, month - 1, day);
-};
-
-// Streaks count distinct IST days with at least one host-approved submission.
-const calculateStreaks = (timestamps, todayKey = istDayKey(new Date())) => {
-  const days = [...new Set(timestamps.map(istDayKey))].sort();
-  if (days.length === 0) return { currentStreak: 0, longestStreak: 0, activeDays: 0 };
-
-  let longestStreak = 1;
-  let run = 1;
-  for (let i = 1; i < days.length; i += 1) {
-    const difference = (dayKeyToUtcDay(days[i]) - dayKeyToUtcDay(days[i - 1])) / 86400000;
-    run = difference === 1 ? run + 1 : 1;
-    longestStreak = Math.max(longestStreak, run);
-  }
-
-  const yesterday = new Date(dayKeyToUtcDay(todayKey) - 86400000).toISOString().slice(0, 10);
-  let currentStreak = 0;
-  const latestDay = days[days.length - 1];
-  if (latestDay === todayKey || latestDay === yesterday) {
-    currentStreak = 1;
-    for (let i = days.length - 1; i > 0; i -= 1) {
-      const difference = (dayKeyToUtcDay(days[i]) - dayKeyToUtcDay(days[i - 1])) / 86400000;
-      if (difference !== 1) break;
-      currentStreak += 1;
-    }
-  }
-
-  return { currentStreak, longestStreak, activeDays: days.length };
-};
+// Streak calculation (IST calendar days) lives in utils/streaks.js so the
+// leaderboard and the participant streak endpoint share one implementation.
+// Active host streak adjustments count as completed days; they never add points.
 
 /**
  * Case-insensitive, locale-aware name comparison used as the secondary
@@ -147,8 +115,31 @@ const getChallengeLeaderboard = async (req, res, next) => {
       { $match: { challenge: challenge._id, status: 'Approved' } },
       { $group: { _id: '$participant', completionDates: { $addToSet: '$completionDate' } } },
     ]);
+    // Active (non-revoked) host adjustments add protected calendar days only.
+    const activeAdjustments = await StreakAdjustment.aggregate([
+      { $match: { challenge: challenge._id, status: 'active' } },
+      { $group: { _id: '$participant', dates: { $addToSet: '$date' } } },
+    ]);
+    const adjustmentsByParticipant = new Map(
+      activeAdjustments.map((group) => [String(group._id), group.dates])
+    );
+    const todayKey = istDateKey(new Date());
+    const streakParticipantIds = new Set([
+      ...approvedDates.map((group) => String(group._id)),
+      ...adjustmentsByParticipant.keys(),
+    ]);
+    const approvedDatesByParticipant = new Map(
+      approvedDates.map((group) => [String(group._id), group.completionDates])
+    );
     const streaksByParticipant = new Map(
-      approvedDates.map((group) => [String(group._id), calculateStreaks(group.completionDates)])
+      [...streakParticipantIds].map((id) => [
+        id,
+        calculateStreaks(
+          approvedDatesByParticipant.get(id) || [],
+          todayKey,
+          adjustmentsByParticipant.get(id) || []
+        ),
+      ])
     );
 
     const approvedByParticipant = new Map();
@@ -168,7 +159,7 @@ const getChallengeLeaderboard = async (req, res, next) => {
 
       const stats = approvedByParticipant.get(participantId);
       const solvedCount = stats ? stats.solvedCount : 0;
-      const streak = streaksByParticipant.get(participantId) || { currentStreak: 0, longestStreak: 0, activeDays: 0 };
+      const streak = streaksByParticipant.get(participantId) || { currentStreak: 0, longestStreak: 0, activeDays: 0, protectedDays: 0 };
 
       entriesByParticipant.set(participantId, {
         participantId,
@@ -186,6 +177,7 @@ const getChallengeLeaderboard = async (req, res, next) => {
         currentStreak: streak.currentStreak,
         longestStreak: streak.longestStreak,
         activeDays: streak.activeDays,
+        protectedDays: streak.protectedDays || 0,
       });
     });
 

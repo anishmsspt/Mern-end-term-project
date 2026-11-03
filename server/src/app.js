@@ -56,6 +56,7 @@ const challengeRoutes = require('./routes/challengeRoutes');
 const submissionRoutes = require('./routes/submissionRoutes');
 const leaderboardRoutes = require('./routes/leaderboardRoutes');
 const automationRoutes = require('./routes/automationRoutes');
+const streakAdjustmentRoutes = require('./routes/streakAdjustmentRoutes');
 
 // Mount API Routes
 app.use('/api/auth', authRoutes);
@@ -63,6 +64,7 @@ app.use('/api/challenges', challengeRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/automation', automationRoutes);
+app.use('/api/streak-adjustments', streakAdjustmentRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {

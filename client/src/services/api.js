@@ -215,3 +215,25 @@ export async function setChallengeAutomation(challengeId, enabled, token) {
 export async function getAutomationEnrollments(challengeId, token) {
   return request(`/api/automation/${challengeId}/enrollments`, { method: 'GET', token });
 }
+
+/* ==================== Host Streak Protection Services ==================== */
+export async function grantStreakAdjustment(payload, token) {
+  const data = await request('/api/streak-adjustments', { method: 'POST', token, body: JSON.stringify(payload) });
+  notifyLeaderboardChanged();
+  return data;
+}
+export async function getStreakAdjustments(challengeId, token, params = {}) {
+  const parts = [];
+  if (params.participantId) parts.push(`participantId=${encodeURIComponent(params.participantId)}`);
+  if (params.status) parts.push(`status=${encodeURIComponent(params.status)}`);
+  const qs = parts.length ? `?${parts.join('&')}` : '';
+  return request(`/api/streak-adjustments/challenge/${encodeURIComponent(challengeId)}${qs}`, { method: 'GET', token, cache: 'no-store' });
+}
+export async function revokeStreakAdjustment(id, reason, token) {
+  const data = await request(`/api/streak-adjustments/${encodeURIComponent(id)}/revoke`, { method: 'POST', token, body: JSON.stringify({ reason }) });
+  notifyLeaderboardChanged();
+  return data;
+}
+export async function getMyStreakAdjustments(challengeId, token) {
+  return request(`/api/streak-adjustments/mine?challengeId=${encodeURIComponent(challengeId)}`, { method: 'GET', token, cache: 'no-store' });
+}
