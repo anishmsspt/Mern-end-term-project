@@ -159,6 +159,12 @@ npm run build --prefix client
 | `GET` | `/api/submissions/review-queue` | Host | List pending submissions for host's challenges |
 | `POST` | `/api/submissions/:id/review` | Host | Approve (with points) or reject (with reason) |
 | `GET` | `/api/leaderboard/:challengeId` | Authenticated | Authoritative standings & breakdown |
+| `POST` | `/api/streak-adjustments` | Host (challenge owner) | Grant a Host Protected streak credit for one IST day (`challengeId`, `participantId`, `date`, `reason`) |
+| `GET` | `/api/streak-adjustments/challenge/:challengeId` | Host (challenge owner) | Adjustment history (optional `participantId`, `status` filters) |
+| `POST` | `/api/streak-adjustments/:id/revoke` | Host (challenge owner) | Revoke a credit (record kept for audit) |
+| `GET` | `/api/streak-adjustments/mine?challengeId=` | Participant | Own active protected days and streak summary |
+
+> **Streak Protection** only credits a calendar day (Asia/Kolkata) toward the streak. It never creates a submission, a score transaction or leaderboard points, and never edits submission timestamps.
 
 ---
 

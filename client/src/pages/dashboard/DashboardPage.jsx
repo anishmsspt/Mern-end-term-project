@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getMyChallenges, getMySubmissions, createChallenge } from '../../services/api';
+import { getMyChallenges, getMySubmissions, createChallenge, getMyStreakAdjustments } from '../../services/api';
 import JoinChallengeCard from '../../components/challenges/JoinChallengeCard';
 import SubmissionModal from '../../components/submissions/SubmissionModal';
 import SubmissionsList from '../../components/submissions/SubmissionsList';
 import AutomationPanel from '../../components/challenges/AutomationPanel';
 import SubmissionAnalytics from '../../components/analytics/SubmissionAnalytics';
+import StreakProtection from '../../components/streaks/StreakProtection';
+import ProtectedDays from '../../components/streaks/ProtectedDays';
 import { ExternalLink, PlusCircle, Loader2, X } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -15,6 +17,7 @@ export default function DashboardPage() {
   const [challenges, setChallenges] = useState([]);
   const [activeChallenge, setActiveChallenge] = useState(null);
   const [submissions, setSubmissions] = useState([]);
+  const [protectedDays, setProtectedDays] = useState({ adjustments: [], streak: null });
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [isCreateChallengeModalOpen, setIsCreateChallengeModalOpen] = useState(false);
@@ -41,6 +44,19 @@ export default function DashboardPage() {
       if (isParticipant) {
         const subRes = await getMySubmissions(currentActive?._id, token);
         setSubmissions(subRes.submissions || []);
+
+        // Protected days are optional context: never block the dashboard if this fails.
+        if (currentActive?._id) {
+          try {
+            const protectedRes = await getMyStreakAdjustments(currentActive._id, token);
+            setProtectedDays({ adjustments: protectedRes.adjustments || [], streak: protectedRes.streak || null });
+          } catch (protectedErr) {
+            console.warn('[Dashboard] Could not load protected days:', protectedErr);
+            setProtectedDays({ adjustments: [], streak: null });
+          }
+        } else {
+          setProtectedDays({ adjustments: [], streak: null });
+        }
       }
     } catch (err) {
       console.error('[Dashboard] Error loading data:', err);
@@ -213,6 +229,11 @@ export default function DashboardPage() {
             />
           )}
 
+          {/* Protected days (kept separate from real submissions) */}
+          {isParticipant && activeChallenge && (
+            <ProtectedDays adjustments={protectedDays.adjustments} streak={protectedDays.streak} />
+          )}
+
           {/* Host Challenge Management Grid */}
           {isHost && (
             <section className="lc-card overflow-hidden">
@@ -286,6 +307,9 @@ export default function DashboardPage() {
 
           {/* Host submission analytics */}
           {isHost && <SubmissionAnalytics challenges={challenges} />}
+
+          {/* Host streak protection */}
+          {isHost && <StreakProtection challenges={challenges} />}
 
           {/* Account Profile Card */}
           <section className="lc-card p-6">
