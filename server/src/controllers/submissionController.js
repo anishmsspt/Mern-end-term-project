@@ -56,7 +56,7 @@ const createSubmission = async (req, res, next) => {
     }
 
     const now = new Date();
-    // Allow start-day activity: challenge is active if today >= start date boundary
+
     if (challenge.startDate) {
       const challengeStartDay = parseDateBoundary(challenge.startDate, 'start');
       if (now < challengeStartDay) {
@@ -77,7 +77,7 @@ const createSubmission = async (req, res, next) => {
       }
     }
 
-    // Verify participant membership in this challenge
+    // Verify participant membership
     const membership = await ChallengeMembership.findOne({
       user: req.user._id,
       challenge: challenge._id,
@@ -91,7 +91,7 @@ const createSubmission = async (req, res, next) => {
       });
     }
 
-    // Validate LeetCode URL and extract canonical slug
+    // Validate LeetCode URL
     const urlValidation = parseLeetCodeUrl(problemUrl);
     if (!urlValidation.isValid) {
       return res.status(400).json({
@@ -102,27 +102,47 @@ const createSubmission = async (req, res, next) => {
 
     const { slug, canonicalUrl } = urlValidation;
 
-    // Difficulty/title are resolved server-side; client-provided values are never trusted.
+    // Resolve difficulty/title server-side
     let authoritativeProblem = await ProblemCache.findOne({ slug });
-    if (!authoritativeProblem || Date.now() - authoritativeProblem.fetchedAt.getTime() > 30 * 86400000) {
+
+    if (
+      !authoritativeProblem ||
+      Date.now() - authoritativeProblem.fetchedAt.getTime() > 30 * 86400000
+    ) {
       try {
         const details = await getProblem(slug);
+
         if (details && ['Easy', 'Medium', 'Hard'].includes(details.difficulty)) {
           authoritativeProblem = await ProblemCache.findOneAndUpdate(
-            { slug }, { $set: { title: details.title, difficulty: details.difficulty, fetchedAt: new Date() } },
+            { slug },
+            {
+              $set: {
+                title: details.title,
+                difficulty: details.difficulty,
+                fetchedAt: new Date(),
+              },
+            },
             { upsert: true, new: true, setDefaultsOnInsert: true }
           );
         }
       } catch (lookupError) {
-        console.warn(`[LeetCode] Difficulty lookup failed for ${slug}: ${lookupError.message}`);
+        console.warn(
+          `[LeetCode] Difficulty lookup failed for ${slug}: ${lookupError.message}`
+        );
       }
     }
-    const verifiedDifficulty = ['Easy', 'Medium', 'Hard'].includes(authoritativeProblem?.difficulty)
-      ? authoritativeProblem.difficulty : 'Unknown';
+
+    const verifiedDifficulty = ['Easy', 'Medium', 'Hard'].includes(
+      authoritativeProblem?.difficulty
+    )
+      ? authoritativeProblem.difficulty
+      : 'Unknown';
+
     const verifiedTitle = authoritativeProblem?.title || problemTitle.trim();
 
-    // Validate completion date format
+    // Validate completion date
     const parsedDate = parseDateBoundary(completionDate, 'default');
+
     if (!parsedDate || isNaN(parsedDate.getTime())) {
       return res.status(400).json({
         success: false,
@@ -133,7 +153,6 @@ const createSubmission = async (req, res, next) => {
     const completionDateDayStart = parseDateBoundary(completionDate, 'start');
     const todayEnd = parseDateBoundary(new Date(), 'end');
 
-    // Future date validation: Disallow dates strictly after today (local date boundary)
     if (completionDateDayStart > todayEnd) {
       return res.status(400).json({
         success: false,
@@ -141,9 +160,10 @@ const createSubmission = async (req, res, next) => {
       });
     }
 
-    // Check against challenge start date (local calendar day boundary)
+    // Check against challenge start date
     if (challenge.startDate) {
       const challengeStartDay = parseDateBoundary(challenge.startDate, 'start');
+
       if (completionDateDayStart < challengeStartDay) {
         return res.status(400).json({
           success: false,
@@ -152,8 +172,7 @@ const createSubmission = async (req, res, next) => {
       }
     }
 
-    // Duplicate solve prevention:
-    // A participant cannot submit a problem if they already have a Pending or Approved submission for it
+    // Prevent duplicate solves
     const existingQualifying = await Submission.findOne({
       participant: req.user._id,
       challenge: challenge._id,
@@ -169,7 +188,7 @@ const createSubmission = async (req, res, next) => {
       });
     }
 
-    // Check daily submission limit rule if configured
+    // Check daily submission limit
     if (challenge.rules?.maxSubmissionsPerDay) {
       const dayStart = parseIstDateBoundary(istDateKey(parsedDate), 'start');
       const dayEnd = parseIstDateBoundary(istDateKey(parsedDate), 'end');
@@ -189,42 +208,36 @@ const createSubmission = async (req, res, next) => {
       }
     }
 
-// Save submission with guaranteed initial status 'Pending'
-let submission;
+    // Save submission with server-generated receipt time
+    let submission;
 
-try {
-  const receivedAt = new Date();
+    try {
+      submission = await Submission.create({
+        participant: req.user._id,
+        challenge: challenge._id,
+        problemTitle: verifiedTitle,
+        problemUrl: canonicalUrl,
+        problemSlug: slug,
+        difficulty: verifiedDifficulty,
+        difficultyVerified: verifiedDifficulty !== 'Unknown',
+        activeDuplicateKey: `${req.user._id}:${challenge._id}:${slug}`,
+        source: 'manual',
+        receivedAt: new Date(),
+        completionDate: parsedDate,
+        notes: notes ? String(notes).trim() : '',
+        evidenceUrl: evidenceUrl ? String(evidenceUrl).trim() : '',
+        status: 'Pending',
+      });
+    } catch (createError) {
+      if (createError.code === 11000) {
+        return res.status(409).json({
+          success: false,
+          message: 'This problem already has a pending or approved submission in this challenge.',
+        });
+      }
 
-  submission = await Submission.create({
-    participant: req.user._id,
-    challenge: challenge._id,
-    problemTitle: verifiedTitle,
-    problemUrl: canonicalUrl,
-    problemSlug: slug,
-    difficulty: verifiedDifficulty,
-    difficultyVerified: verifiedDifficulty !== 'Unknown',
-    activeDuplicateKey: `${req.user._id}:${challenge._id}:${slug}`,
-    source: 'manual',
-
-    // Server-generated submission receipt timestamp
-    receivedAt,
-
-    completionDate: parsedDate,
-    notes: notes ? String(notes).trim() : '',
-    evidenceUrl: evidenceUrl ? String(evidenceUrl).trim() : '',
-    status: 'Pending',
-  });
-
-} catch (createError) {
-  if (createError.code === 11000) {
-    return res.status(409).json({
-      success: false,
-      message: 'This problem already has a pending or approved submission in this challenge.',
-    });
-  }
-
-  throw createError;
-}
+      throw createError;
+    }
 
     return res.status(201).json({
       success: true,
@@ -288,13 +301,14 @@ const getSubmissionById = async (req, res, next) => {
       });
     }
 
-    // Participant Data Isolation Check:
-    // Only the submitting participant OR the Host who owns the challenge may view this submission
+    // Only the submitting participant, challenge host, or admin may view it.
     const isOwner = submission.participant._id.equals(req.user._id);
+
     const isChallengeHost =
       submission.challenge &&
       submission.challenge.host &&
       submission.challenge.host.equals(req.user._id);
+
     const isAdmin = req.user.role === 'admin';
 
     if (!isOwner && !isChallengeHost && !isAdmin) {
@@ -319,7 +333,6 @@ const getSubmissionById = async (req, res, next) => {
  */
 const getReviewQueue = async (req, res, next) => {
   try {
-    // Role check: Only Host or Admin accounts may access the review queue
     if (req.user.role !== 'host' && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -329,8 +342,11 @@ const getReviewQueue = async (req, res, next) => {
 
     const { challengeId, participantId, completionDate, status } = req.query;
 
-    // 1. Fetch all challenges owned by this Host
-    const hostChallenges = await Challenge.find({ host: req.user._id }).select('_id');
+    // Fetch all challenges owned by this Host.
+    const hostChallenges = await Challenge.find({
+      host: req.user._id,
+    }).select('_id');
+
     const hostChallengeIds = hostChallenges.map((c) => c._id);
 
     if (hostChallengeIds.length === 0) {
@@ -343,25 +359,30 @@ const getReviewQueue = async (req, res, next) => {
       });
     }
 
-    // 2. Validate challengeId filter if provided
+    // Validate requested challenge ownership.
     let targetChallengeIds = hostChallengeIds;
+
     if (challengeId) {
-      const isOwned = hostChallengeIds.some((id) => id.toString() === challengeId);
+      const isOwned = hostChallengeIds.some(
+        (id) => id.toString() === challengeId
+      );
+
       if (!isOwned && req.user.role !== 'admin') {
         return res.status(403).json({
           success: false,
           message: 'Forbidden: You do not have host authorization for the requested challenge.',
         });
       }
+
       targetChallengeIds = [challengeId];
     }
 
-    // 3. Build query filter
+    // Build query filter.
     const query = {
       challenge: { $in: targetChallengeIds },
     };
 
-    // Default to 'Pending' if no status is specified; allow 'all' or specific status
+    // Default to Pending; allow all or a specific status.
     if (!status || status.toLowerCase() === 'pending') {
       query.status = 'Pending';
     } else if (status.toLowerCase() !== 'all') {
@@ -374,19 +395,29 @@ const getReviewQueue = async (req, res, next) => {
 
     if (completionDate) {
       const dayStart = parseIstDateBoundary(completionDate, 'start');
+
       if (!isNaN(dayStart.getTime())) {
         const dayEnd = parseIstDateBoundary(completionDate, 'end');
-        query.completionDate = { $gte: dayStart, $lte: dayEnd };
+
+        query.completionDate = {
+          $gte: dayStart,
+          $lte: dayEnd,
+        };
       }
     }
 
-    // 4. Pagination & deterministic sorting (FIFO: oldest pending first)
+    // Pagination and FIFO sorting.
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(req.query.limit) || 20)
+    );
+
     const skip = (page - 1) * limit;
 
     const [total, submissions] = await Promise.all([
       Submission.countDocuments(query),
+
       Submission.find(query)
         .populate('participant', 'name email leetcodeUsername')
         .populate('challenge', 'title joinCode rules')
@@ -403,6 +434,280 @@ const getReviewQueue = async (req, res, next) => {
       limit,
       totalPages: Math.ceil(total / limit) || 1,
       submissions,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Host Submission Analytics
+ *
+ * Activity-time semantics:
+ * - Automated: original LeetCode submittedAt timestamp.
+ * - Manual: server receivedAt timestamp.
+ * - Older records without either timestamp fall back to createdAt.
+ *
+ * All statuses are included.
+ */
+const getSubmissionAnalytics = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'host' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Only challenge Hosts may access submission analytics.',
+      });
+    }
+
+    const { challengeId } = req.params;
+
+    const challenge = await Challenge.findById(challengeId)
+      .select('_id title host');
+
+    if (!challenge) {
+      return res.status(404).json({
+        success: false,
+        message: 'Challenge not found.',
+      });
+    }
+
+    const isChallengeHost =
+      challenge.host && challenge.host.equals(req.user._id);
+
+    if (!isChallengeHost && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: You are not authorized to view analytics for this challenge.',
+      });
+    }
+
+    const analyticsResult = await Submission.aggregate([
+      {
+        $match: {
+          challenge: challenge._id,
+        },
+      },
+      {
+        $addFields: {
+          activityTime: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ['$source', 'automated'] },
+                  { $ne: ['$leetcode.submittedAt', null] },
+                ],
+              },
+              '$leetcode.submittedAt',
+              { $ifNull: ['$receivedAt', '$createdAt'] },
+            ],
+          },
+        },
+      },
+      {
+        $facet: {
+          summary: [
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                firstSubmissionAt: { $min: '$activityTime' },
+                lastSubmissionAt: { $max: '$activityTime' },
+              },
+            },
+          ],
+
+          statusBreakdown: [
+            {
+              $group: {
+                _id: '$status',
+                count: { $sum: 1 },
+              },
+            },
+            { $sort: { _id: 1 } },
+          ],
+
+          sourceBreakdown: [
+            {
+              $group: {
+                _id: '$source',
+                count: { $sum: 1 },
+              },
+            },
+            { $sort: { _id: 1 } },
+          ],
+
+          hourlyActivity: [
+            {
+              $group: {
+                _id: {
+                  $hour: {
+                    date: '$activityTime',
+                    timezone: 'Asia/Kolkata',
+                  },
+                },
+                count: { $sum: 1 },
+              },
+            },
+            { $sort: { _id: 1 } },
+          ],
+
+          dailyActivity: [
+            {
+              $group: {
+                _id: {
+                  $dateToString: {
+                    format: '%Y-%m-%d',
+                    date: '$activityTime',
+                    timezone: 'Asia/Kolkata',
+                  },
+                },
+                count: { $sum: 1 },
+              },
+            },
+            { $sort: { _id: 1 } },
+          ],
+
+          participantActivity: [
+            {
+              $group: {
+                _id: '$participant',
+                total: { $sum: 1 },
+
+                manual: {
+                  $sum: {
+                    $cond: [
+                      { $eq: ['$source', 'manual'] },
+                      1,
+                      0,
+                    ],
+                  },
+                },
+
+                automated: {
+                  $sum: {
+                    $cond: [
+                      { $eq: ['$source', 'automated'] },
+                      1,
+                      0,
+                    ],
+                  },
+                },
+
+                firstSubmissionAt: {
+                  $min: '$activityTime',
+                },
+
+                lastSubmissionAt: {
+                  $max: '$activityTime',
+                },
+              },
+            },
+            { $sort: { total: -1, lastSubmissionAt: -1 } },
+          ],
+        },
+      },
+    ]);
+
+    const result = analyticsResult[0] || {};
+
+    const summary = result.summary?.[0] || {
+      total: 0,
+      firstSubmissionAt: null,
+      lastSubmissionAt: null,
+    };
+
+    // Resolve participant names and usernames.
+    const memberships = await ChallengeMembership.find({
+      challenge: challenge._id,
+    }).populate('user', 'name email leetcodeUsername');
+
+    const participantById = new Map();
+
+    memberships.forEach((membership) => {
+      if (membership.user) {
+        participantById.set(
+          membership.user._id.toString(),
+          membership.user
+        );
+      }
+    });
+
+    const participantActivity = (
+      result.participantActivity || []
+    ).map((item) => {
+      const participant = participantById.get(
+        item._id.toString()
+      );
+
+      return {
+        participant: participant
+          ? {
+              _id: participant._id,
+              name: participant.name,
+              email: participant.email,
+              leetcodeUsername: participant.leetcodeUsername,
+            }
+          : {
+              _id: item._id,
+            },
+
+        total: item.total,
+        manual: item.manual,
+        automated: item.automated,
+        firstSubmissionAt: item.firstSubmissionAt,
+        lastSubmissionAt: item.lastSubmissionAt,
+      };
+    });
+
+    const hourlyCounts = new Map(
+      (result.hourlyActivity || []).map((item) => [
+        item._id,
+        item.count,
+      ])
+    );
+
+    // Return all 24 IST hours, including zero-activity hours.
+    const hourlyActivity = Array.from(
+      { length: 24 },
+      (_, hour) => ({
+        hour,
+        count: hourlyCounts.get(hour) || 0,
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+
+      challenge: {
+        _id: challenge._id,
+        title: challenge.title,
+      },
+
+      summary: {
+        total: summary.total,
+        firstSubmissionAt: summary.firstSubmissionAt,
+        lastSubmissionAt: summary.lastSubmissionAt,
+      },
+
+      statusBreakdown: result.statusBreakdown || [],
+      sourceBreakdown: result.sourceBreakdown || [],
+
+      hourlyActivity,
+
+      dailyActivity: (result.dailyActivity || []).map((item) => ({
+        date: item._id,
+        count: item.count,
+      })),
+
+      participantActivity,
+
+      timezone: 'Asia/Kolkata',
+
+      activityTimeDefinitions: {
+        automated: 'Original LeetCode submission time (leetcode.submittedAt)',
+        manual: 'Time the Unanimous backend received the submission (receivedAt)',
+        legacyFallback: 'Database creation time (createdAt) when the relevant timestamp is unavailable',
+      },
     });
   } catch (error) {
     next(error);
@@ -427,8 +732,14 @@ const reviewSubmission = async (req, res, next) => {
     }
 
     // Validate decision
-    const normalizedDecision = String(decision ?? action ?? '').toLowerCase().trim();
-    if (normalizedDecision !== 'approve' && normalizedDecision !== 'reject') {
+    const normalizedDecision = String(
+      decision ?? action ?? ''
+    ).toLowerCase().trim();
+
+    if (
+      normalizedDecision !== 'approve' &&
+      normalizedDecision !== 'reject'
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid review decision: Must be either 'approve' or 'reject'.",
@@ -437,6 +748,7 @@ const reviewSubmission = async (req, res, next) => {
 
     // Find submission and verify challenge ownership
     const submission = await Submission.findById(id).populate('challenge');
+
     if (!submission) {
       return res.status(404).json({
         success: false,
@@ -444,7 +756,6 @@ const reviewSubmission = async (req, res, next) => {
       });
     }
 
-    // Host-to-Challenge authorization check
     const isChallengeHost =
       submission.challenge &&
       submission.challenge.host &&
@@ -457,7 +768,7 @@ const reviewSubmission = async (req, res, next) => {
       });
     }
 
-    // State validation: Can only review Pending submissions
+    // Can only review Pending submissions
     if (submission.status !== 'Pending') {
       return res.status(409).json({
         success: false,
@@ -467,12 +778,19 @@ const reviewSubmission = async (req, res, next) => {
     }
 
     if (normalizedDecision === 'approve') {
-      if (!submission.difficultyVerified || !['Easy', 'Medium', 'Hard'].includes(submission.difficulty)) {
-        return res.status(409).json({ success: false, message: 'Cannot approve until the problem difficulty has been verified by LeetCode.' });
+      if (
+        !submission.difficultyVerified ||
+        !['Easy', 'Medium', 'Hard'].includes(submission.difficulty)
+      ) {
+        return res.status(409).json({
+          success: false,
+          message: 'Cannot approve until the problem difficulty has been verified by LeetCode.',
+        });
       }
+
       const serverPoints = pointsForDifficulty(submission.difficulty);
 
-      // Atomic conditional update ensuring concurrent requests cannot double-approve
+      // Atomic update prevents concurrent double approval.
       const updatedSubmission = await Submission.findOneAndUpdate(
         { _id: id, status: 'Pending' },
         {
@@ -481,7 +799,9 @@ const reviewSubmission = async (req, res, next) => {
             pointsAwarded: serverPoints,
             reviewer: req.user._id,
             reviewedAt: new Date(),
-            reviewNotes: reviewNotes ? String(reviewNotes).trim() : 'Approved by Host',
+            reviewNotes: reviewNotes
+              ? String(reviewNotes).trim()
+              : 'Approved by Host',
             rejectionReason: '',
           },
         },
@@ -497,7 +817,7 @@ const reviewSubmission = async (req, res, next) => {
         });
       }
 
-      // Persist immutable ScoreTransaction audit record
+      // Persist immutable ScoreTransaction audit record.
       await ScoreTransaction.findOneAndUpdate(
         { submission: updatedSubmission._id },
         {
@@ -522,16 +842,20 @@ const reviewSubmission = async (req, res, next) => {
     }
 
     if (normalizedDecision === 'reject') {
-      // Validate rejection reason: non-empty string required
       const reason = reviewNotes || req.body.rejectionReason;
-      if (!reason || typeof reason !== 'string' || !reason.trim()) {
+
+      if (
+        !reason ||
+        typeof reason !== 'string' ||
+        !reason.trim()
+      ) {
         return res.status(400).json({
           success: false,
           message: 'Rejection requires a non-empty reviewNotes or rejectionReason explaining why the submission was rejected.',
         });
       }
 
-      // Atomic conditional update
+      // Atomic conditional update.
       const updatedSubmission = await Submission.findOneAndUpdate(
         { _id: id, status: 'Pending' },
         {
@@ -543,7 +867,9 @@ const reviewSubmission = async (req, res, next) => {
             reviewNotes: reason.trim(),
             rejectionReason: reason.trim(),
           },
-          $unset: { activeDuplicateKey: 1 },
+          $unset: {
+            activeDuplicateKey: 1,
+          },
         },
         { new: true }
       )
@@ -557,8 +883,7 @@ const reviewSubmission = async (req, res, next) => {
         });
       }
 
-      // NOTE: A rejection awards no points, so no ScoreTransaction is written.
-      // (Previously a bogus "Approved solve" transaction was recorded here.)
+      // Rejection awards no points, so no ScoreTransaction is written.
 
       return res.status(200).json({
         success: true,
@@ -576,5 +901,6 @@ module.exports = {
   getMySubmissions,
   getSubmissionById,
   getReviewQueue,
+  getSubmissionAnalytics,
   reviewSubmission,
 };
