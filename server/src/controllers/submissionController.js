@@ -189,26 +189,42 @@ const createSubmission = async (req, res, next) => {
       }
     }
 
-    // Save submission with guaranteed initial status 'Pending'
-    let submission;
-    try { submission = await Submission.create({
-      participant: req.user._id,
-      challenge: challenge._id,
-      problemTitle: verifiedTitle,
-      problemUrl: canonicalUrl,
-      problemSlug: slug,
-      difficulty: verifiedDifficulty,
-      difficultyVerified: verifiedDifficulty !== 'Unknown',
-      activeDuplicateKey: `${req.user._id}:${challenge._id}:${slug}`,
-      source: 'manual',
-      completionDate: parsedDate,
-      notes: notes ? String(notes).trim() : '',
-      evidenceUrl: evidenceUrl ? String(evidenceUrl).trim() : '',
-      status: 'Pending',
-    }); } catch (createError) {
-      if (createError.code === 11000) return res.status(409).json({ success: false, message: 'This problem already has a pending or approved submission in this challenge.' });
-      throw createError;
-    }
+// Save submission with guaranteed initial status 'Pending'
+let submission;
+
+try {
+  const receivedAt = new Date();
+
+  submission = await Submission.create({
+    participant: req.user._id,
+    challenge: challenge._id,
+    problemTitle: verifiedTitle,
+    problemUrl: canonicalUrl,
+    problemSlug: slug,
+    difficulty: verifiedDifficulty,
+    difficultyVerified: verifiedDifficulty !== 'Unknown',
+    activeDuplicateKey: `${req.user._id}:${challenge._id}:${slug}`,
+    source: 'manual',
+
+    // Server-generated submission receipt timestamp
+    receivedAt,
+
+    completionDate: parsedDate,
+    notes: notes ? String(notes).trim() : '',
+    evidenceUrl: evidenceUrl ? String(evidenceUrl).trim() : '',
+    status: 'Pending',
+  });
+
+} catch (createError) {
+  if (createError.code === 11000) {
+    return res.status(409).json({
+      success: false,
+      message: 'This problem already has a pending or approved submission in this challenge.',
+    });
+  }
+
+  throw createError;
+}
 
     return res.status(201).json({
       success: true,
