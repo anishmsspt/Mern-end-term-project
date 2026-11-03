@@ -2,6 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getAutomationStatus, startAutomationVerification, confirmAutomationVerification, updateAutomationEnrollment, triggerAutomationSync, setChallengeAutomation, getAutomationEnrollments } from '../../services/api';
 
+function getNextScheduledCheck(now) {
+  const next = new Date(now);
+  next.setSeconds(0, 0);
+  next.setMinutes(Math.floor(next.getMinutes() / 10) * 10 + 10);
+  return next;
+}
+
+function formatCountdown(milliseconds) {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return hours > 0
+    ? `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`
+    : `${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+}
+
 export default function AutomationPanel({ challenge, isHost = false }) {
   const { token } = useAuth();
   const [status, setStatus] = useState(null);
@@ -13,6 +30,17 @@ export default function AutomationPanel({ challenge, isHost = false }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [now, setNow] = useState(() => new Date());
+
+  const automationIsEnabled = isHost ? challengeEnabled : Boolean(challenge?.automation?.enabled);
+  const nextCheck = getNextScheduledCheck(now);
+  const countdown = formatCountdown(nextCheck.getTime() - now.getTime());
+  const latestHostSync = enrollments
+    .map((item) => item.lastSyncAt)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b) - new Date(a))[0];
+  const lastSyncAt = isHost ? latestHostSync : status?.lastSyncAt;
+
   const load = async () => {
     try {
       if (isHost) {
@@ -25,14 +53,27 @@ export default function AutomationPanel({ challenge, isHost = false }) {
       }
     } catch (e) { setError(e.message); }
   };
-  useEffect(() => { setChallengeEnabled(Boolean(challenge?.automation?.enabled)); load(); }, [challenge?._id]);
+
+  useEffect(() => {
+    setChallengeEnabled(Boolean(challenge?.automation?.enabled));
+    load();
+  }, [challenge?._id]);
+
+  useEffect(() => {
+    if (!automationIsEnabled) return undefined;
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, [automationIsEnabled]);
+
   const act = async (fn, successMessage) => {
     setBusy(true); setError(''); setMessage('');
     try { const result = await fn(); setMessage(result.message || successMessage); if (isHost && result.challenge?.automation) setChallengeEnabled(Boolean(result.challenge.automation.enabled)); await load(); return result; }
     catch (e) { setError(e.message); }
     finally { setBusy(false); }
   };
+
   if (!challenge) return null;
+
   return (
     <section className="lc-card p-5 space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -41,8 +82,25 @@ export default function AutomationPanel({ challenge, isHost = false }) {
           <h3 className="font-serif text-xl text-cream-50">{isHost ? 'Challenge sync settings' : 'Automatic solve tracking'}</h3>
           <p className="text-xs text-ink-400 mt-1">Accepted solves are checked every 10 minutes and enter the host review queue.</p>
         </div>
-        <span className="lc-badge">{(isHost ? challengeEnabled : challenge.automation?.enabled) ? 'Enabled' : 'Disabled'}</span>
+        <span className="lc-badge">{automationIsEnabled ? 'Enabled' : 'Disabled'}</span>
       </div>
+
+      {automationIsEnabled && (
+        <div className="rounded-lg border border-peach-300/20 bg-peach-300/5 p-3 space-y-2" aria-live="polite">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs text-ink-300">Next automatic check</span>
+            <span className="text-xs font-semibold text-peach-200 tabular-nums">{countdown}</span>
+          </div>
+          <div className="text-sm font-medium text-cream-50">
+            Around {nextCheck.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+          </div>
+          <div className="text-xs text-ink-400">
+            {lastSyncAt ? `Last successful sync: ${new Date(lastSyncAt).toLocaleString()}` : 'Waiting for the first successful sync.'}
+          </div>
+          <p className="text-[11px] text-ink-500">Runs are scheduled every 10 minutes. GitHub Actions may start a little later than the scheduled time.</p>
+        </div>
+      )}
+
       {isHost ? (
         <>
           <button disabled={busy} onClick={() => act(() => setChallengeAutomation(challenge._id, !challengeEnabled, token), 'Settings updated.')} className="lc-btn-secondary text-xs">
