@@ -6,6 +6,7 @@ import JoinChallengeCard from '../../components/challenges/JoinChallengeCard';
 import SubmissionModal from '../../components/submissions/SubmissionModal';
 import SubmissionsList from '../../components/submissions/SubmissionsList';
 import AutomationPanel from '../../components/challenges/AutomationPanel';
+import SubmissionAnalytics from '../../components/analytics/SubmissionAnalytics';
 import { ExternalLink, PlusCircle, Loader2, X } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -282,6 +283,9 @@ export default function DashboardPage() {
               </div>
             </section>
           )}
+
+          {/* Host submission analytics */}
+          {isHost && <SubmissionAnalytics challenges={challenges} />}
 
           {/* Account Profile Card */}
           <section className="lc-card p-6">
